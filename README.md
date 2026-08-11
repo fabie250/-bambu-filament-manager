@@ -22,7 +22,7 @@
 ├── backend/            # FastAPI 服务端 (部署于服务器 / 1Panel)
 ├── frontend/           # HTML/CSS/JS 网页前端 (自适应域名请求)
 └── client/             # Windows 客户端源码与打包文件
-🚀 一、服务端部署指南（基于 1Panel）
+```🚀 一、服务端部署指南（基于 1Panel）
 本系统服务端推荐使用 1Panel 服务器面板 进行快速容器化部署：
 
 1. 部署 MySQL 数据库
