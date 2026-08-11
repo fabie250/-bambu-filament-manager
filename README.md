@@ -1,4 +1,3 @@
-# -bambu-filament-manager
 # 拓竹 3D 打印耗材与打印机管理系统 (Bambu Lab Filament Manager)
 
 一个专为拓竹（Bambu Lab）3D 打印用户打造的**开源轻量级耗材库存管理与多色自动扣减系统**。
@@ -22,7 +21,7 @@
 ```text
 ├── backend/            # FastAPI 服务端 (部署于服务器 / 1Panel)
 ├── frontend/           # HTML/CSS/JS 网页前端 (自适应域名请求)
-└── client/             # Windows 客户端脚本 (可打包为独立 .exe)
+└── client/             # Windows 客户端源码与打包文件
 🚀 一、服务端部署指南（基于 1Panel）
 本系统服务端推荐使用 1Panel 服务器面板 进行快速容器化部署：
 
