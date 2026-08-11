@@ -36,7 +36,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 # ----------------- ORM 模型 -----------------
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -114,14 +114,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if os.path.exists("../frontend"):
-    app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+# 多路径挂载前端，增强兼容性
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+possible_paths = [
+    os.path.join(CURRENT_DIR, "frontend"),
+    os.path.join(os.path.dirname(CURRENT_DIR), "frontend"),
+    "../frontend",
+    "./frontend",
+    "/app/frontend"
+]
+for p in possible_paths:
+    if os.path.exists(p) and os.path.isdir(p):
+        app.mount("/static", StaticFiles(directory=p), name="static")
+        break
 
 @app.get("/", include_in_schema=False)
 def read_index():
-    index_path = "../frontend/index.html"
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
+    for p in possible_paths:
+        idx = os.path.join(p, "index.html")
+        if os.path.exists(idx):
+            return FileResponse(idx)
     return {"status": "success", "message": "API 服务运行正常"}
 
 def get_db():
@@ -305,10 +317,8 @@ def adjust_filament_weight(
     if not filament:
         raise HTTPException(status_code=404, detail="耗材不存在或无权访问")
 
-    # 计算变动后的剩余重量
     filament.current_weight_g = max(0.0, round(filament.current_weight_g - data.adjust_weight_g, 2))
     
-    # 区分增加还是减少
     action_str = "手动增加" if data.adjust_weight_g < 0 else "手动减少"
     task_desc = f"{action_str} ({data.reason})" if data.reason else action_str
 
@@ -336,6 +346,7 @@ def get_filament_usage_logs(filament_id: int, user: User = Depends(get_current_u
             r.created_at = r.created_at + datetime.timedelta(hours=8)
     return records
 
+# 支持正负对冲（允许撤销增加记录）
 @app.delete("/api/usage-records/{record_id}", tags=["耗材台账"])
 def delete_usage_record(
     record_id: int, 
@@ -351,12 +362,12 @@ def delete_usage_record(
     
     actual_refund = refund_weight_g if refund_weight_g is not None else record.used_weight_g
     
-    if filament and actual_refund > 0:
+    if filament and actual_refund != 0:
         filament.current_weight_g = max(0.0, round(filament.current_weight_g + actual_refund, 2))
 
     db.delete(record)
     db.commit()
-    return {"status": "success", "message": f"记录已删除，已成功退还 {actual_refund}g 耗材"}
+    return {"status": "success", "message": f"记录已删除，已成功处理 {actual_refund}g 耗材变更"}
 
 @app.delete("/api/filaments/{filament_id}", tags=["耗材台账"])
 def delete_filament(filament_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
