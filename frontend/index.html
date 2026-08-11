@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拓竹耗材与打印机管理系统 / Filament Manager</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f0f2f5; color: #1f2937; padding: 20px; }
+        .container { max-width: 1050px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h2 { font-size: 22px; color: #111827; font-weight: 700; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #374151; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-align: center; }
+        .btn-primary { background: #10b981; color: #ffffff; }
+        .btn-secondary { background: #4b5563; color: #ffffff; }
+        .btn-blue { background: #2563eb; color: #ffffff; }
+        .btn-purple { background: #8b5cf6; color: #ffffff; }
+        .btn-amber { background: #f59e0b; color: #ffffff; }
+        .btn-danger { background: #ef4444; color: #ffffff; }
+        .alert-msg { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; display: block; }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; display: block; }
+        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 20px; }
+        .hidden { display: none !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; border-radius: 6px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+        th { background: #f3f4f6; font-weight: 600; }
+        .color-badge { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: middle; margin-right: 6px; border: 1px solid #ccc; }
+        .code-box { background: #1e293b; color: #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; margin-top: 8px; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #ffffff; width: 780px; max-width: 95%; max-height: 85vh;
+            border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
+        .modal-body { overflow-y: auto; margin-top: 15px; flex: 1; }
+        .close-btn { font-size: 24px; cursor: pointer; color: #6b7280; font-weight: bold; }
+        .badge-used { color: #ef4444; font-weight: bold; }
+        .task-name-box { font-family: monospace; font-size: 13px; color: #1e293b; word-break: break-all; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>拓竹耗材与打印机管理系统</h2>
+    </div>
+
+    <!-- 1. 登录注册模块 -->
+    <div id="authSection">
+        <div class="card">
+            <h3 style="margin-bottom: 15px;">账号登录与注册</h3>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="username" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="password" placeholder="请输入密码">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="handleLogin()" style="flex: 1;">登录系统</button>
+                <button class="btn btn-secondary" onclick="handleRegister()" style="flex: 1;">注册新账号</button>
+            </div>
+            <div id="authMsg" class="alert-msg"></div>
+        </div>
+    </div>
+
+    <!-- 2. 主控制台 -->
+    <div id="mainSection" class="hidden">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 16px; font-weight: 600;">当前登录账户：</span>
+                <span id="currentUser" style="font-weight: bold; color: #2563eb;"></span>
+            </div>
+            <button class="btn btn-secondary" onclick="logout()" style="width: auto;">退出登录</button>
+        </div>
+
+        <div class="card">
+            <h3>🔑 后处理脚本 API 密钥 (X-API-Key)</h3>
+            <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">复制生成的 API Key 填入 Windows 端客户端配置中，系统即可精准匹配你的数据。</p>
+            <div style="margin-top: 12px; display: flex; gap: 10px;">
+                <button class="btn btn-blue" onclick="generateApiKey()">生成/重置我的脚本 API Key</button>
+            </div>
+            <div id="apiKeyDisplay" class="code-box hidden">尚未生成 API Key</div>
+        </div>
+
+        <div class="card">
+            <h3>➕ 手动新增耗材档案</h3>
+            <div class="form-row" style="margin-top: 12px;">
+                <div class="form-group">
+                    <label>品牌</label>
+                    <input type="text" id="f_brand" value="Bambu Lab">
+                </div>
+                <div class="form-group">
+                    <label>材质</label>
+                    <input type="text" id="f_material" placeholder="如 PLA / PETG">
+                </div>
+                <div class="form-group">
+                    <label>颜色名称与 HEX</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="f_color_name" placeholder="如 哑光黑">
+                        <input type="color" id="f_color_hex" value="#000000" style="width: 50px; padding: 2px;">
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>初始重量 (克/g)</label>
+                    <input type="number" id="f_weight" value="1000">
+                </div>
+                <div class="form-group">
+                    <label>价格 (元)</label>
+                    <input type="number" id="f_price" value="99">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-primary" onclick="addFilament()" style="width: 100%;">保存耗材档案</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3>我的耗材台账</h3>
+                <button class="btn btn-blue" onclick="loadFilaments()" style="width: auto; padding: 6px 12px; font-size: 13px;">刷新列表</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>品牌</th>
+                        <th>材质</th>
+                        <th>颜色</th>
+                        <th>剩余重量 (g)</th>
+                        <th>价格 (元)</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="filamentTableBody">
+                    <tr><td colspan="7" style="text-align: center; color: #9ca3af;">暂无数据</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 历史明细弹窗 -->
+<div id="logModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📜 耗材历史使用明细</h3>
+            <span class="close-btn" onclick="closeLogs()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                <input type="hidden" id="modal_filament_id">
+                <span style="font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap;">快速补扣/炒面补充：</span>
+                <input type="number" id="quick_adj_weight" placeholder="克重(如: 25代表炒面25g)" style="width: 180px; padding: 6px 10px; font-size: 13px;">
+                <input type="text" id="quick_adj_reason" placeholder="备注 (例: 炒面/失误)" style="flex: 1; padding: 6px 10px; font-size: 13px;">
+                <button class="btn btn-amber" style="padding: 6px 14px; font-size: 13px; white-space: nowrap;" onclick="submitModalQuickAdjust()">提交记录</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>扣减时间</th>
+                        <th>模型 / 备注说明</th>
+                        <th>消耗重量</th>
+                        <th>扣减后剩余</th>
+                        <th style="width: 80px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr><td colspan="5" style="text-align: center; color: #9ca3af;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BASE_URL = window.location.origin;
+
+    function showMsg(text, isError = false) {
+        const msgDiv = document.getElementById('authMsg');
+        msgDiv.innerText = text;
+        msgDiv.className = isError ? 'alert-msg alert-error' : 'alert-msg alert-success';
+    }
+
+    async function handleRegister() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        if (!u || !p) return showMsg("请输入用户名和密码", true);
+
+        const res = await fetch(`${BASE_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        });
+        const data = await res.json();
+        showMsg(res.ok ? "注册成功，请点击【登录系统】" : (data.detail || "注册失败"), !res.ok);
+    }
+
+    async function handleLogin() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        if (!u || !p) return showMsg("请输入用户名和密码", true);
+
+        const formData = new URLSearchParams();
+        formData.append('username', u);
+        formData.append('password', p);
+
+        const res = await fetch(`${BASE_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: formData
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('username', u);
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainSection').classList.remove('hidden');
+            document.getElementById('currentUser').innerText = u;
+            loadFilaments();
+        } else {
+            showMsg(data.detail || "账号或密码错误", true);
+        }
+    }
+
+    async function generateApiKey() {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${BASE_URL}/api/auth/api-keys`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+            body: JSON.stringify({key_name: "Windows后处理脚本"})
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const box = document.getElementById('apiKeyDisplay');
+            box.innerText = "你的 API Key: " + data.api_key;
+            box.classList.remove('hidden');
+        }
+    }
+
+    async function addFilament() {
+        const token = localStorage.getItem('token');
+        const payload = {
+            brand: document.getElementById('f_brand').value,
+            material: document.getElementById('f_material').value,
+            color_name: document.getElementById('f_color_name').value,
+            color_hex: document.getElementById('f_color_hex').value,
+            initial_weight_g: parseFloat(document.getElementById('f_weight').value),
+            current_weight_g: parseFloat(document.getElementById('f_weight').value),
+            price: parseFloat(document.getElementById('f_price').value)
+        };
+        if(!payload.material || !payload.color_name) return alert("请填写材质和颜色名称");
+
+        const res = await fetch(`${BASE_URL}/api/filaments`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            alert("新增耗材成功！");
+            loadFilaments();
+        }
+    }
+
+    async function loadFilaments() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch(`${BASE_URL}/api/filaments`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (res.ok) {
+            const list = await res.json();
+            const tbody = document.getElementById('filamentTableBody');
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #9ca3af;">暂无耗材数据</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = list.map(item => `
+                <tr>
+                    <td><strong>${item.id}</strong></td>
+                    <td>${item.brand}</td>
+                    <td>${item.material}</td>
+                    <td><span class="color-badge" style="background-color: ${item.color_hex};"></span>${item.color_name}</td>
+                    <td><strong style="color: #10b981;">${item.current_weight_g} g</strong></td>
+                    <td>¥ ${item.price}</td>
+                    <td>
+                        <button class="btn btn-purple" style="margin-right: 4px;" onclick="showLogs(${item.id})">查看明细</button>
+                        <button class="btn btn-danger" onclick="deleteFilament(${item.id})">删除档案</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    async function showLogs(filamentId) {
+        document.getElementById('modal_filament_id').value = filamentId;
+        document.getElementById('quick_adj_weight').value = '';
+        document.getElementById('quick_adj_reason').value = '';
+        document.getElementById('logModal').classList.remove('hidden');
+        await refreshModalLogs(filamentId);
+    }
+
+    async function refreshModalLogs(filamentId) {
+        const token = localStorage.getItem('token');
+        const tbody = document.getElementById('logTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#9ca3af;">加载中...</td></tr>';
+
+        const res = await fetch(`${BASE_URL}/api/filaments/${filamentId}/logs`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+
+        if (res.ok) {
+            const logs = await res.json();
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#9ca3af;">暂无使用扣减记录</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td style="font-size: 12px; color: #64748b;">${log.created_at}</td>
+                    <td class="task-name-box">${log.task_name || '手动调整/导出'}</td>
+                    <td class="badge-used">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + Math.abs(log.used_weight_g)} g</td>
+                    <td><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g' : '-'}</strong></td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="deleteLogRecord(${log.id}, ${log.used_weight_g})">撤销/删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    async function submitModalQuickAdjust() {
+        const fid = document.getElementById('modal_filament_id').value;
+        const w = parseFloat(document.getElementById('quick_adj_weight').value);
+        const reason = document.getElementById('quick_adj_reason').value.trim() || "炒面/打印失误";
+
+        if (isNaN(w)) return alert("请输入有效的补扣克重");
+        const token = localStorage.getItem('token');
+
+        const res = await fetch(`${BASE_URL}/api/filaments/${fid}/adjust-weight`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+            body: JSON.stringify({adjust_weight_g: w, reason: reason})
+        });
+
+        if (res.ok) {
+            document.getElementById('quick_adj_weight').value = '';
+            document.getElementById('quick_adj_reason').value = '';
+            refreshModalLogs(fid);
+            loadFilaments();
+        }
+    }
+
+    async function deleteLogRecord(recordId, originalUsedWeight) {
+        const inputVal = prompt(
+            `确定要删除此条记录吗？\n\n请在下方输入需要退还回耗材总量的克重 (g)：\n• 输入 ${originalUsedWeight} : 全额退还 ${originalUsedWeight}g\n• 输入 0 : 仅删除记录，不退还克重\n• 输入自定义数值 : 退还指定克重`, 
+            originalUsedWeight
+        );
+
+        if (inputVal === null) return;
+
+        const refundWeight = parseFloat(inputVal);
+        if (isNaN(refundWeight) || refundWeight < 0) {
+            return alert("请输入有效的大于或等于 0 的退还克重！");
+        }
+
+        const token = localStorage.getItem('token');
+        const fid = document.getElementById('modal_filament_id').value;
+
+        const res = await fetch(`${BASE_URL}/api/usage-records/${recordId}?refund_weight_g=${refundWeight}`, {
+            method: 'DELETE',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+
+        if (res.ok) {
+            alert(`删除成功！已为您退还 ${refundWeight}g 耗材到台账中。`);
+            refreshModalLogs(fid);
+            loadFilaments();
+        } else {
+            alert("删除失败，请稍后重试");
+        }
+    }
+
+    function closeLogs() {
+        document.getElementById('logModal').classList.add('hidden');
+    }
+
+    async function deleteFilament(id) {
+        if(!confirm("确定删除该耗材档案吗？")) return;
+        const token = localStorage.getItem('token');
+        await fetch(`${BASE_URL}/api/filaments/${id}`, {
+            method: 'DELETE',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        loadFilaments();
+    }
+
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        document.getElementById('mainSection').classList.add('hidden');
+        document.getElementById('authSection').classList.remove('hidden');
+    }
+
+    window.onload = function() {
+        const token = localStorage.getItem('token');
+        const user = localStorage.getItem('username');
+        if (token && user) {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainSection').classList.remove('hidden');
+            document.getElementById('currentUser').innerText = user;
+            loadFilaments();
+        }
+    }
+</script>
+</body>
+</html>
