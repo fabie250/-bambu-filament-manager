@@ -22,76 +22,39 @@
 ├── frontend/           # HTML/CSS/JS 网页前端 (自适应域名请求)
 └── client/             # Windows 客户端源码与打包文件
 ```
-🚀 一、服务端部署指南（基于 1Panel）
-本系统服务端推荐使用 1Panel 服务器面板 进行快速容器化部署：
+💻 二、客户端配置与 BambuStudio 设置教程
+1. 获取 API Key 与新建耗材
+注册与登录：
+打开你的管理系统网页端，首先注册并登录账号。
 
-1. 部署 MySQL 数据库
-打开 1Panel ➔ 【应用商店】 ➔ 安装 MySQL。
+生成 API Key：
+登录成功后，在后台首页点击 【生成/重置我的脚本 API Key】 按钮，复制生成的 API Key 备用。
 
-创建一个数据库（例如数据库名：filament_db），并记下数据库用户名与密码。
+新增耗材档案：
+在“手动新增耗材档案”区域，填入品牌、材质、颜色及初始重量（默认 1000g）并保存。在下面的“我的耗材台账”中可随时查看或调整耗材剩余克重。
 
-2. 部署 FastAPI 后端
-在 1Panel ➔ 【容器】 ➔ 创建容器 / 运行环境。
+2. 客户端获取与配置文件生成
+下载客户端程序：
+前往本仓库右侧的 Releases 页面下载打包好的 bambu_post_process.exe 客户端程序（或直接下载预编译版本）。
 
-配置以下环境变量（可在 1Panel 环境变量设置中添加）：
+首次运行生成配置：
+双击运行一次 bambu_post_process.exe。运行后稍等片刻，程序会在同级目录下自动生成 config.json 与 log.txt 文件。
 
-DB_USER：数据库用户名
+修改 API Key：
+右键点击 config.json ➔ 选择 【用记事本打开】，将其中的 api_key 替换为你刚才在网页端复制的专属 API Key 并保存。
 
-DB_PASS：数据库密码
+3. 在 BambuStudio 中绑定后处理脚本
+获取程序绝对路径：
+找到下载好的 bambu_post_process.exe，按住键盘 Shift 键右键点击文件，选择 【复制文件地址】（或右键菜单中的复制文件路径）。
 
-DB_HOST：数据库 IP（通常为 172.17.0.1 或容器网桥 IP）
+填入 BambuStudio 后处理脚本：
+打开 BambuStudio ➔ 切换到左侧 【工艺】 标签页 ➔ 选择 【其他】 ➔ 滚动到最底部的 【后处理脚本】 框内，直接粘贴刚复制的文件地址（保持带双引号格式）。
 
-DB_PORT：3306
+另存为用户预设：
+点击工艺右上角的 【保存预设】（小磁盘图标），起一个名字（例如 0.20mm Standard @BBL P2S 后处理），点击确认。
 
-DB_NAME：filament_db
-
-JWT_SECRET：任意自定义的随机加密字符串
-
-容器映射端口：例如将容器内部的 8000 端口映射到宿主机的 8000。
-
-3. 配置反向代理与域名
-在 1Panel ➔ 【网站】 ➔ 【创建网站】 / 【反向代理】。
-
-填入你的域名（建议使用标准 80 或 443 端口，例如 http://your-domain.com），反向代理地址指向 http://172.17.0.1:8000。
-
-浏览器访问你的域名，即可直接打开登录和台账后台界面！
-
-## 💻 二、Windows 客户端获取与使用教程
-
-### 1. 下载预编译客户端 `.exe`
-你无需在本地安装 Python 环境，直接前往本仓库右侧的 **Releases** 页面，下载最新的 `Bambu_Post_Process_v1.0.zip` 压缩包并解压即可得到 `bambu_post_process.exe`。
-
-*(如果你想自行编译源码，可以在 `client` 目录下运行 `python -m PyInstaller --noconsole --onefile bambu_post_process.py`)*
-
----
-
-### 2. ⚠️ 首次运行与配置文件生成（非常重要！）
-
-由于程序支持动态读取配置文件，**首次使用时请按照以下顺序操作**：
-
-1. **首次运行**：
-   双击运行一次 `bambu_post_process.exe`（或在 Bambu Studio 中绑定路径后触发一次切片导出）。
-   *程序在首次运行后，会在 `.exe` 的**同级目录下自动生成一个 `config.json` 文件**。*
-
-2. **修改配置文件 `config.json`**：
-   用记事本打开同级目录下的 `config.json`，修改为你自己的服务器地址与专属 API Key：
-   ```json
-   {
-     "server_url": "http://你的域名/api/ingest/script-report",
-     "filaments_url": "http://你的域名/api/ingest/script-filaments",
-     "api_key": "你的专属APIKey (从网页后台获取)",
-     "filament_id": 1
-   }
-   🔑 如何获取 API Key：登录网页后台 ➔ 点击【生成/重置我的脚本 API Key】➔ 复制以 sk_ 开头的字符串填入此处。
-
-3. 在 Bambu Studio（拓竹切片软件）中绑定
-打开 Bambu Studio ➔ 进入 【工艺】 ➔ 【其他】 ➔ 【后处理脚本】。
-
-输入你的 .exe 文件绝对路径（路径两侧用英文双引号包裹），例如：
-
-Plaintext
-"C:\Tools\bambu_post_process.exe"
-保存预设。以后每次在 Bambu Studio 中完成切片并导出/打印时，都会自动弹出耗材绑定窗口并上报扣减！
+方便日常切换：
+以后在打印时，只需要在工艺下拉菜单中直接选择这个带有后处理的预设，每次完成切片并导出/打印时，就会自动弹出多色扣减窗口上报克重！
 
 🔮 路线规划 (Roadmap)
 [x] Web 台账与多租户 API Key 隔离
