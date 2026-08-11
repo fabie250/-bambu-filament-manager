@@ -61,6 +61,7 @@ JWT_SECRET：任意自定义的随机加密字符串
 1. 获取 API Key 与新建耗材
 注册与登录：
 打开你的管理系统网页端，首先注册并登录账号。
+<img width="865" height="388" alt="image" src="https://github.com/user-attachments/assets/b9e3424d-2006-4e61-8da3-14726ee65bbb" />
 
 生成 API Key：
 登录成功后，在后台首页点击 【生成/重置我的脚本 API Key】 按钮，复制生成的 API Key 备用。
