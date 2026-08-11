@@ -7,7 +7,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f0f2f5; color: #1f2937; padding: 20px; }
-        .container { max-width: 1050px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .container { max-width: 1100px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 25px; }
         .header h2 { font-size: 22px; color: #111827; font-weight: 700; }
         .form-group { margin-bottom: 15px; }
@@ -38,7 +38,7 @@
             display: flex; justify-content: center; align-items: center;
         }
         .modal-content {
-            background: #ffffff; width: 780px; max-width: 95%; max-height: 85vh;
+            background: #ffffff; width: 880px; max-width: 95%; max-height: 85vh;
             border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             display: flex; flex-direction: column;
         }
@@ -48,6 +48,7 @@
         .badge-used { color: #ef4444; font-weight: bold; }
         .badge-add { color: #10b981; font-weight: bold; }
         .task-name-box { font-family: monospace; font-size: 13px; color: #1e293b; word-break: break-all; }
+        .price-tag { font-size: 12px; color: #6b7280; margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -121,7 +122,7 @@
                     <input type="number" id="f_weight" value="1000">
                 </div>
                 <div class="form-group">
-                    <label>价格 (元)</label>
+                    <label>购买总价 (元)</label>
                     <input type="number" id="f_price" value="99">
                 </div>
                 <div class="form-group" style="display: flex; align-items: flex-end;">
@@ -142,8 +143,8 @@
                         <th>品牌</th>
                         <th>材质</th>
                         <th>颜色</th>
-                        <th>剩余重量 (g)</th>
-                        <th>价格 (元)</th>
+                        <th>剩余重量 / 价值</th>
+                        <th>买入原价</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -155,7 +156,7 @@
     </div>
 </div>
 
-<!-- 弹窗 1：主列表【手动调整】弹窗（保底操作，不展示明细表格） -->
+<!-- 弹窗 1：主列表【手动调整】弹窗 -->
 <div id="adjustModal" class="modal-overlay hidden">
     <div class="modal-content" style="width: 500px;">
         <div class="modal-header">
@@ -166,58 +167,64 @@
             <input type="hidden" id="adj_filament_id">
             <div class="form-group">
                 <label>调整类型</label>
-                <select id="adj_type">
+                <select id="adj_type" onchange="calculateAdjPriceNotice('adj')">
                     <option value="reduce">减少 (-)</option>
                     <option value="add">增加 (+)</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>调整数值 (克/g)</label>
-                <input type="number" id="adj_weight" placeholder="请输入数值 (例如: 50)">
+                <input type="number" id="adj_weight" placeholder="请输入数值 (例如: 50)" oninput="calculateAdjPriceNotice('adj')">
             </div>
             <div class="form-group">
                 <label>模型名称 / 备注说明</label>
                 <input type="text" id="adj_reason" placeholder="例: 手动补充库存、炒面损耗、模型名称">
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn btn-amber" style="flex: 1;" onclick="submitAdjustModal()">确认提交</button>
+            <div id="adj_price_notice" style="font-size: 13px; color: #d97706; font-weight: bold; margin-bottom: 12px;"></div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-amber" style="flex: 1;" onclick="submitAdjustModal()">确认提交并重算价格</button>
                 <button class="btn btn-secondary" style="flex: 1;" onclick="closeAdjustModal()">取消</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 弹窗 2：【查看明细】弹窗（含明细顶部调整输入栏与历史变动表格） -->
+<!-- 弹窗 2：【查看明细】弹窗 -->
 <div id="logModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>📜 耗材历史使用明细</h3>
+            <h3>📜 耗材历史使用与损耗账单</h3>
             <span class="close-btn" onclick="closeLogs()">&times;</span>
         </div>
         <div class="modal-body">
-            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-                <input type="hidden" id="modal_filament_id">
-                <select id="modal_adj_type" style="width: 110px; padding: 6px; font-size: 13px;">
-                    <option value="reduce">减少 (-)</option>
-                    <option value="add">增加 (+)</option>
-                </select>
-                <input type="number" id="quick_adj_weight" placeholder="克重 (g)" style="width: 120px; padding: 6px 10px; font-size: 13px;">
-                <input type="text" id="quick_adj_reason" placeholder="模型名称 / 备注说明" style="flex: 1; padding: 6px 10px; font-size: 13px;">
-                <button class="btn btn-amber" style="padding: 6px 14px; font-size: 13px; white-space: nowrap;" onclick="submitModalQuickAdjust()">提交记录</button>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="hidden" id="modal_filament_id">
+                    <select id="modal_adj_type" style="width: 110px; padding: 6px; font-size: 13px;" onchange="calculateAdjPriceNotice('modal')">
+                        <option value="reduce">减少 (-)</option>
+                        <option value="add">增加 (+)</option>
+                    </select>
+                    <input type="number" id="quick_adj_weight" placeholder="克重 (g)" style="width: 120px; padding: 6px 10px; font-size: 13px;" oninput="calculateAdjPriceNotice('modal')">
+                    <input type="text" id="quick_adj_reason" placeholder="模型名称 / 备注说明" style="flex: 1; padding: 6px 10px; font-size: 13px;">
+                    <button class="btn btn-amber" style="padding: 6px 14px; font-size: 13px; white-space: nowrap;" onclick="submitModalQuickAdjust()">提交调整</button>
+                </div>
+                <div id="modal_adj_price_notice" style="font-size: 12px; color: #d97706; font-weight: bold; margin-top: 6px; margin-left: 2px;"></div>
             </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>扣减/补充时间</th>
+                        <th>时间</th>
                         <th>模型 / 备注说明</th>
                         <th>变动重量</th>
-                        <th>变动后剩余</th>
+                        <th>损耗/补充金额</th>
+                        <th>变动后剩余存量 (价值)</th>
                         <th style="width: 80px;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="logTableBody">
-                    <tr><td colspan="5" style="text-align: center; color: #9ca3af;">加载中...</td></tr>
+                    <tr><td colspan="6" style="text-align: center; color: #9ca3af;">加载中...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -226,10 +233,11 @@
 
 <script>
     const BASE_URL = window.location.origin;
+    let globalFilamentsMap = {};
 
     function showMsg(text, isError = false) {
         const msgDiv = document.getElementById('authMsg');
-        msgDiv.innerText = text;
+        msgDiv.innerText = typeof text === 'string' ? text : (text.detail || JSON.stringify(text));
         msgDiv.className = isError ? 'alert-msg alert-error' : 'alert-msg alert-success';
     }
 
@@ -238,13 +246,17 @@
         const p = document.getElementById('password').value.trim();
         if (!u || !p) return showMsg("请输入用户名和密码", true);
 
-        const res = await fetch(`${BASE_URL}/api/auth/register`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
-        });
-        const data = await res.json();
-        showMsg(res.ok ? "注册成功，请点击【登录系统】" : (data.detail || "注册失败"), !res.ok);
+        try {
+            const res = await fetch(`${BASE_URL}/api/auth/register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            showMsg(res.ok ? "注册成功，请点击【登录系统】" : (data.detail || "注册失败"), !res.ok);
+        } catch (e) {
+            showMsg("网络错误，请检查服务器连接", true);
+        }
     }
 
     async function handleLogin() {
@@ -256,22 +268,26 @@
         formData.append('username', u);
         formData.append('password', p);
 
-        const res = await fetch(`${BASE_URL}/api/auth/login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData
-        });
-        const data = await res.json();
+        try {
+            const res = await fetch(`${BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: formData
+            });
+            const data = await res.json();
 
-        if (res.ok) {
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('username', u);
-            document.getElementById('authSection').classList.add('hidden');
-            document.getElementById('mainSection').classList.remove('hidden');
-            document.getElementById('currentUser').innerText = u;
-            loadFilaments();
-        } else {
-            showMsg(data.detail || "账号或密码错误", true);
+            if (res.ok) {
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', u);
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('mainSection').classList.remove('hidden');
+                document.getElementById('currentUser').innerText = u;
+                loadFilaments();
+            } else {
+                showMsg(data.detail || "账号或密码错误", true);
+            }
+        } catch (e) {
+            showMsg("登录失败，请重试", true);
         }
     }
 
@@ -318,31 +334,69 @@
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const res = await fetch(`${BASE_URL}/api/filaments`, {
-            headers: {'Authorization': 'Bearer ' + token}
+        const res = await fetch(`${BASE_URL}/api/filaments?_t=${Date.now()}`, {
+            headers: {'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-cache'}
         });
         if (res.ok) {
             const list = await res.json();
             const tbody = document.getElementById('filamentTableBody');
+            
+            globalFilamentsMap = {};
+            list.forEach(item => { globalFilamentsMap[item.id] = item; });
+
             if (list.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #9ca3af;">暂无耗材数据</td></tr>`;
                 return;
             }
-            tbody.innerHTML = list.map(item => `
-                <tr>
-                    <td><strong>${item.id}</strong></td>
-                    <td>${item.brand}</td>
-                    <td>${item.material}</td>
-                    <td><span class="color-badge" style="background-color: ${item.color_hex};"></span>${item.color_name}</td>
-                    <td><strong style="color: #10b981;">${item.current_weight_g} g</strong></td>
-                    <td>¥ ${item.price}</td>
-                    <td>
-                        <button class="btn btn-purple" style="margin-right: 4px;" onclick="showLogs(${item.id})">查看明细</button>
-                        <button class="btn btn-amber" style="margin-right: 4px;" onclick="openAdjustModal(${item.id})">手动调整</button>
-                        <button class="btn btn-danger" onclick="deleteFilament(${item.id})">删除档案</button>
-                    </td>
-                </tr>
-            `).join('');
+
+            const rowsHtml = list.map(item => {
+                const unitPricePerG = (item.price / (item.initial_weight_g || 1000));
+                const currentRemainingValue = (item.current_weight_g * unitPricePerG).toFixed(2);
+
+                return `
+                    <tr>
+                        <td><strong>${item.id}</strong></td>
+                        <td>${item.brand}</td>
+                        <td>${item.material}</td>
+                        <td><span class="color-badge" style="background-color: ${item.color_hex};"></span>${item.color_name}</td>
+                        <td>
+                            <strong style="color: #10b981;">${item.current_weight_g} g</strong>
+                            <span class="price-tag">(约 ¥${currentRemainingValue})</span>
+                        </td>
+                        <td>¥ ${item.price}</td>
+                        <td>
+                            <button class="btn btn-purple" style="margin-right: 4px;" onclick="showLogs(${item.id})">查看明细</button>
+                            <button class="btn btn-amber" style="margin-right: 4px;" onclick="openAdjustModal(${item.id})">手动调整</button>
+                            <button class="btn btn-danger" onclick="deleteFilament(${item.id})">删除档案</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rowsHtml;
+        }
+    }
+
+    function calculateAdjPriceNotice(source) {
+        const isModal = source === 'modal';
+        const fid = document.getElementById(isModal ? 'modal_filament_id' : 'adj_filament_id').value;
+        const adjType = document.getElementById(isModal ? 'modal_adj_type' : 'adj_type').value;
+        const weightInput = parseFloat(document.getElementById(isModal ? 'quick_adj_weight' : 'adj_weight').value);
+        const noticeDiv = document.getElementById(isModal ? 'modal_adj_price_notice' : 'adj_price_notice');
+
+        if (!fid || !globalFilamentsMap[fid] || isNaN(weightInput) || weightInput <= 0) {
+            noticeDiv.innerText = '';
+            return;
+        }
+
+        const filament = globalFilamentsMap[fid];
+        const unitPricePerG = (filament.price / (filament.initial_weight_g || 1000));
+        const cost = (weightInput * unitPricePerG).toFixed(2);
+
+        if (adjType === 'reduce') {
+            noticeDiv.innerText = `💡 提示：本次扣减 ${weightInput}g，预计折算消耗金额：¥ ${cost} 元`;
+        } else {
+            noticeDiv.innerText = `💡 提示：本次补充 ${weightInput}g，预计折算增加存量价值：¥ ${cost} 元`;
         }
     }
 
@@ -351,6 +405,7 @@
         document.getElementById('adj_weight').value = '';
         document.getElementById('adj_reason').value = '';
         document.getElementById('adj_type').value = 'reduce';
+        document.getElementById('adj_price_notice').innerText = '';
         document.getElementById('adjustModal').classList.remove('hidden');
     }
 
@@ -388,6 +443,7 @@
         document.getElementById('quick_adj_weight').value = '';
         document.getElementById('quick_adj_reason').value = '';
         document.getElementById('modal_adj_type').value = 'reduce';
+        document.getElementById('modal_adj_price_notice').innerText = '';
         document.getElementById('logModal').classList.remove('hidden');
         await refreshModalLogs(filamentId);
     }
@@ -395,29 +451,41 @@
     async function refreshModalLogs(filamentId) {
         const token = localStorage.getItem('token');
         const tbody = document.getElementById('logTableBody');
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#9ca3af;">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#9ca3af;">加载中...</td></tr>';
 
-        const res = await fetch(`${BASE_URL}/api/filaments/${filamentId}/logs`, {
-            headers: {'Authorization': 'Bearer ' + token}
+        const filament = globalFilamentsMap[filamentId];
+        const unitPricePerG = filament ? (filament.price / (filament.initial_weight_g || 1000)) : 0;
+
+        const res = await fetch(`${BASE_URL}/api/filaments/${filamentId}/logs?_t=${Date.now()}`, {
+            headers: {'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-cache'}
         });
 
         if (res.ok) {
             const logs = await res.json();
             if (logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#9ca3af;">暂无使用扣减记录</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af;">暂无使用扣减记录</td></tr>`;
                 return;
             }
-            tbody.innerHTML = logs.map(log => `
-                <tr>
-                    <td style="font-size: 12px; color: #64748b;">${log.created_at}</td>
-                    <td class="task-name-box">${log.task_name || '手动调整/导出'}</td>
-                    <td class="${log.used_weight_g > 0 ? 'badge-used' : 'badge-add'}">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + Math.abs(log.used_weight_g)} g</td>
-                    <td><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g' : '-'}</strong></td>
-                    <td>
-                        <button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="deleteLogRecord(${log.id}, ${log.used_weight_g})">撤销/删除</button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = logs.map(log => {
+                const absWeight = Math.abs(log.used_weight_g);
+                const costMoney = (absWeight * unitPricePerG).toFixed(2);
+                const remMoney = log.remaining_weight_g !== null ? (log.remaining_weight_g * unitPricePerG).toFixed(2) : '-';
+
+                return `
+                    <tr>
+                        <td style="font-size: 12px; color: #64748b;">${log.created_at}</td>
+                        <td class="task-name-box">${log.task_name || '手动调整/导出'}</td>
+                        <td class="${log.used_weight_g > 0 ? 'badge-used' : 'badge-add'}">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + absWeight} g</td>
+                        <td style="font-weight: bold; color: ${log.used_weight_g > 0 ? '#ef4444' : '#10b981'};">
+                            ${log.used_weight_g > 0 ? '- ¥' + costMoney : '+ ¥' + costMoney}
+                        </td>
+                        <td><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g (¥' + remMoney + ')' : '-'}</strong></td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="deleteLogRecord(${log.id}, ${log.used_weight_g})">撤销/删除</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
     }
 
@@ -441,21 +509,31 @@
         if (res.ok) {
             document.getElementById('quick_adj_weight').value = '';
             document.getElementById('quick_adj_reason').value = '';
-            refreshModalLogs(fid);
-            loadFilaments();
+            document.getElementById('modal_adj_price_notice').innerText = '';
+            await loadFilaments();
+            await refreshModalLogs(fid);
         }
     }
 
-    async function deleteLogRecord(recordId, originalUsedWeight) {
+    async function deleteLogRecord(recordId, usedWeight) {
+        const defaultRefund = usedWeight;
+        
+        let tipText = "";
+        if (usedWeight > 0) {
+            tipText = `该记录原本【减少了 ${usedWeight}g】\n• 确认输入 ${usedWeight} 将【退还并增加 ${usedWeight}g】存量\n• 输入 0 仅删除记录不改变重量`;
+        } else {
+            tipText = `该记录原本【增加了 ${Math.abs(usedWeight)}g】\n• 确认输入 ${usedWeight} 将【扣除并减少 ${Math.abs(usedWeight)}g】存量\n• 输入 0 仅删除记录不改变重量`;
+        }
+
         const inputVal = prompt(
-            `确定要撤销/删除此条记录吗？\n\n请在下方输入需要退还归还的克重 (g)：\n• 输入 ${originalUsedWeight} : 全额退还 ${originalUsedWeight}g\n• 输入 0 : 仅删除记录不改变重量`, 
-            originalUsedWeight
+            `确定要撤销/删除此条记录吗？\n\n${tipText}`, 
+            defaultRefund
         );
 
         if (inputVal === null) return;
 
         const refundWeight = parseFloat(inputVal);
-        if (isNaN(refundWeight)) return alert("请输入有效数字！");
+        if (isNaN(refundWeight)) return alert("请输入有效的数字！");
 
         const token = localStorage.getItem('token');
         const fid = document.getElementById('modal_filament_id').value;
@@ -466,8 +544,10 @@
         });
 
         if (res.ok) {
-            refreshModalLogs(fid);
-            loadFilaments();
+            await loadFilaments();
+            await refreshModalLogs(fid);
+        } else {
+            alert("撤销失败，请检查网络");
         }
     }
 
