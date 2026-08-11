@@ -1,4 +1,4 @@
-# 拓竹 3D 打印耗材与打印机管理系统 (Bambu Lab Filament Manager)
+# 拓竹 3D 打印耗材管理系统 (Bambu Lab Filament Manager)
 
 一个专为拓竹（Bambu Lab）3D 打印用户打造的**开源轻量级耗材库存管理与多色自动扣减系统**。
 
