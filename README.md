@@ -33,6 +33,9 @@
 2. 准备源码目录
 在 1Panel 的 【文件】 管理器中，将本项目的 backend 和 frontend 文件夹上传至服务器同一个目录下（例如 /opt/bambu-filament-manager）：
 
+/opt/bambu-filament-manager/
+├── backend/            # 存放后端 main.py 与 requirements.txt
+└── frontend/           # 存放前端 index.html
 
 💻 二、客户端配置与 BambuStudio 设置教程
 1. 获取 API Key 与新建耗材
