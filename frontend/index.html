@@ -46,6 +46,7 @@
         .modal-body { overflow-y: auto; margin-top: 15px; flex: 1; }
         .close-btn { font-size: 24px; cursor: pointer; color: #6b7280; font-weight: bold; }
         .badge-used { color: #ef4444; font-weight: bold; }
+        .badge-add { color: #10b981; font-weight: bold; }
         .task-name-box { font-family: monospace; font-size: 13px; color: #1e293b; word-break: break-all; }
     </style>
 </head>
@@ -88,7 +89,7 @@
 
         <div class="card">
             <h3>🔑 后处理脚本 API 密钥 (X-API-Key)</h3>
-            <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">复制生成的 API Key 填入 Windows 端客户端配置中，系统即可精准匹配你的数据。</p>
+            <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">复制生成的 API Key 填入 Windows 端的配置文件中，系统即可精准判断数据归属。</p>
             <div style="margin-top: 12px; display: flex; gap: 10px;">
                 <button class="btn btn-blue" onclick="generateApiKey()">生成/重置我的脚本 API Key</button>
             </div>
@@ -154,7 +155,39 @@
     </div>
 </div>
 
-<!-- 历史明细弹窗 -->
+<!-- 弹窗 1：主列表【手动调整】弹窗（保底操作，不展示明细表格） -->
+<div id="adjustModal" class="modal-overlay hidden">
+    <div class="modal-content" style="width: 500px;">
+        <div class="modal-header">
+            <h3>⚙️ 手动调整耗材存量</h3>
+            <span class="close-btn" onclick="closeAdjustModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="adj_filament_id">
+            <div class="form-group">
+                <label>调整类型</label>
+                <select id="adj_type">
+                    <option value="reduce">减少 (-)</option>
+                    <option value="add">增加 (+)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>调整数值 (克/g)</label>
+                <input type="number" id="adj_weight" placeholder="请输入数值 (例如: 50)">
+            </div>
+            <div class="form-group">
+                <label>模型名称 / 备注说明</label>
+                <input type="text" id="adj_reason" placeholder="例: 手动补充库存、炒面损耗、模型名称">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-amber" style="flex: 1;" onclick="submitAdjustModal()">确认提交</button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="closeAdjustModal()">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗 2：【查看明细】弹窗（含明细顶部调整输入栏与历史变动表格） -->
 <div id="logModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
@@ -164,19 +197,22 @@
         <div class="modal-body">
             <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
                 <input type="hidden" id="modal_filament_id">
-                <span style="font-size: 13px; font-weight: bold; color: #475569; white-space: nowrap;">快速补扣/炒面补充：</span>
-                <input type="number" id="quick_adj_weight" placeholder="克重(如: 25代表炒面25g)" style="width: 180px; padding: 6px 10px; font-size: 13px;">
-                <input type="text" id="quick_adj_reason" placeholder="备注 (例: 炒面/失误)" style="flex: 1; padding: 6px 10px; font-size: 13px;">
+                <select id="modal_adj_type" style="width: 110px; padding: 6px; font-size: 13px;">
+                    <option value="reduce">减少 (-)</option>
+                    <option value="add">增加 (+)</option>
+                </select>
+                <input type="number" id="quick_adj_weight" placeholder="克重 (g)" style="width: 120px; padding: 6px 10px; font-size: 13px;">
+                <input type="text" id="quick_adj_reason" placeholder="模型名称 / 备注说明" style="flex: 1; padding: 6px 10px; font-size: 13px;">
                 <button class="btn btn-amber" style="padding: 6px 14px; font-size: 13px; white-space: nowrap;" onclick="submitModalQuickAdjust()">提交记录</button>
             </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th>扣减时间</th>
+                        <th>扣减/补充时间</th>
                         <th>模型 / 备注说明</th>
-                        <th>消耗重量</th>
-                        <th>扣减后剩余</th>
+                        <th>变动重量</th>
+                        <th>变动后剩余</th>
                         <th style="width: 80px;">操作</th>
                     </tr>
                 </thead>
@@ -302,6 +338,7 @@
                     <td>¥ ${item.price}</td>
                     <td>
                         <button class="btn btn-purple" style="margin-right: 4px;" onclick="showLogs(${item.id})">查看明细</button>
+                        <button class="btn btn-amber" style="margin-right: 4px;" onclick="openAdjustModal(${item.id})">手动调整</button>
                         <button class="btn btn-danger" onclick="deleteFilament(${item.id})">删除档案</button>
                     </td>
                 </tr>
@@ -309,10 +346,48 @@
         }
     }
 
+    function openAdjustModal(filamentId) {
+        document.getElementById('adj_filament_id').value = filamentId;
+        document.getElementById('adj_weight').value = '';
+        document.getElementById('adj_reason').value = '';
+        document.getElementById('adj_type').value = 'reduce';
+        document.getElementById('adjustModal').classList.remove('hidden');
+    }
+
+    function closeAdjustModal() {
+        document.getElementById('adjustModal').classList.add('hidden');
+    }
+
+    async function submitAdjustModal() {
+        const fid = document.getElementById('adj_filament_id').value;
+        const adjType = document.getElementById('adj_type').value;
+        const w = parseFloat(document.getElementById('adj_weight').value);
+        const reason = document.getElementById('adj_reason').value.trim() || "手动调整";
+
+        if (isNaN(w) || w <= 0) return alert("请输入有效的克重数值");
+
+        const actualWeightChange = adjType === 'reduce' ? w : -w;
+        const token = localStorage.getItem('token');
+
+        const res = await fetch(`${BASE_URL}/api/filaments/${fid}/adjust-weight`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+            body: JSON.stringify({adjust_weight_g: actualWeightChange, reason: reason})
+        });
+
+        if (res.ok) {
+            closeAdjustModal();
+            loadFilaments();
+        } else {
+            alert("调整失败，请刷新后重试");
+        }
+    }
+
     async function showLogs(filamentId) {
         document.getElementById('modal_filament_id').value = filamentId;
         document.getElementById('quick_adj_weight').value = '';
         document.getElementById('quick_adj_reason').value = '';
+        document.getElementById('modal_adj_type').value = 'reduce';
         document.getElementById('logModal').classList.remove('hidden');
         await refreshModalLogs(filamentId);
     }
@@ -336,7 +411,7 @@
                 <tr>
                     <td style="font-size: 12px; color: #64748b;">${log.created_at}</td>
                     <td class="task-name-box">${log.task_name || '手动调整/导出'}</td>
-                    <td class="badge-used">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + Math.abs(log.used_weight_g)} g</td>
+                    <td class="${log.used_weight_g > 0 ? 'badge-used' : 'badge-add'}">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + Math.abs(log.used_weight_g)} g</td>
                     <td><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g' : '-'}</strong></td>
                     <td>
                         <button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="deleteLogRecord(${log.id}, ${log.used_weight_g})">撤销/删除</button>
@@ -348,16 +423,19 @@
 
     async function submitModalQuickAdjust() {
         const fid = document.getElementById('modal_filament_id').value;
+        const adjType = document.getElementById('modal_adj_type').value;
         const w = parseFloat(document.getElementById('quick_adj_weight').value);
-        const reason = document.getElementById('quick_adj_reason').value.trim() || "炒面/打印失误";
+        const reason = document.getElementById('quick_adj_reason').value.trim() || "手动调整";
 
-        if (isNaN(w)) return alert("请输入有效的补扣克重");
+        if (isNaN(w) || w <= 0) return alert("请输入有效的克重数值");
+
+        const actualWeightChange = adjType === 'reduce' ? w : -w;
         const token = localStorage.getItem('token');
 
         const res = await fetch(`${BASE_URL}/api/filaments/${fid}/adjust-weight`, {
             method: 'POST',
             headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-            body: JSON.stringify({adjust_weight_g: w, reason: reason})
+            body: JSON.stringify({adjust_weight_g: actualWeightChange, reason: reason})
         });
 
         if (res.ok) {
@@ -370,16 +448,14 @@
 
     async function deleteLogRecord(recordId, originalUsedWeight) {
         const inputVal = prompt(
-            `确定要删除此条记录吗？\n\n请在下方输入需要退还回耗材总量的克重 (g)：\n• 输入 ${originalUsedWeight} : 全额退还 ${originalUsedWeight}g\n• 输入 0 : 仅删除记录，不退还克重\n• 输入自定义数值 : 退还指定克重`, 
+            `确定要撤销/删除此条记录吗？\n\n请在下方输入需要退还归还的克重 (g)：\n• 输入 ${originalUsedWeight} : 全额退还 ${originalUsedWeight}g\n• 输入 0 : 仅删除记录不改变重量`, 
             originalUsedWeight
         );
 
         if (inputVal === null) return;
 
         const refundWeight = parseFloat(inputVal);
-        if (isNaN(refundWeight) || refundWeight < 0) {
-            return alert("请输入有效的大于或等于 0 的退还克重！");
-        }
+        if (isNaN(refundWeight)) return alert("请输入有效数字！");
 
         const token = localStorage.getItem('token');
         const fid = document.getElementById('modal_filament_id').value;
@@ -390,11 +466,8 @@
         });
 
         if (res.ok) {
-            alert(`删除成功！已为您退还 ${refundWeight}g 耗材到台账中。`);
             refreshModalLogs(fid);
             loadFilaments();
-        } else {
-            alert("删除失败，请稍后重试");
         }
     }
 
