@@ -65,9 +65,11 @@ JWT_SECRET：任意自定义的随机加密字符串
 
 生成 API Key：
 登录成功后，在后台首页点击 【生成/重置我的脚本 API Key】 按钮，复制生成的 API Key 备用。
+<img width="865" height="590" alt="image" src="https://github.com/user-attachments/assets/14f50b5e-5969-42cd-9979-18f52d5f7eed" />
 
 新增耗材档案：
 在“手动新增耗材档案”区域，填入品牌、材质、颜色及初始重量（默认 1000g）并保存。在下面的“我的耗材台账”中可随时查看或调整耗材剩余克重。
+<img width="865" height="233" alt="image" src="https://github.com/user-attachments/assets/738846ae-2e15-413b-aeb3-4ba09353ce04" />
 
 2. 客户端获取与配置文件生成
 下载客户端程序：
@@ -75,19 +77,24 @@ JWT_SECRET：任意自定义的随机加密字符串
 
 首次运行生成配置：
 双击运行一次 bambu_post_process.exe。运行后稍等片刻，程序会在同级目录下自动生成 config.json 与 log.txt 文件。
+<img width="865" height="147" alt="image" src="https://github.com/user-attachments/assets/4d5b29df-7f59-453b-a13a-2c477a53ee14" />
 
 修改 API Key：
 右键点击 config.json ➔ 选择 【用记事本打开】，将其中的 api_key 替换为你刚才在网页端复制的专属 API Key 并保存。
+<img width="653" height="161" alt="image" src="https://github.com/user-attachments/assets/655a90dc-069b-4a79-aa33-1f892bb032cc" />
 
 3. 在 BambuStudio 中绑定后处理脚本
 获取程序绝对路径：
 找到下载好的 bambu_post_process.exe，按住键盘 Shift 键右键点击文件，选择 【复制文件地址】（或右键菜单中的复制文件路径）。
+<img width="714" height="734" alt="image" src="https://github.com/user-attachments/assets/be69b827-5201-41f1-b66c-9504c22ff049" />
 
 填入 BambuStudio 后处理脚本：
 打开 BambuStudio ➔ 切换到左侧 【工艺】 标签页 ➔ 选择 【其他】 ➔ 滚动到最底部的 【后处理脚本】 框内，直接粘贴刚复制的文件地址（保持带双引号格式）。
+<img width="865" height="447" alt="image" src="https://github.com/user-attachments/assets/d878d9d7-f2ee-40c1-a093-8778b0d44a2a" />
 
 另存为用户预设：
 点击工艺右上角的 【保存预设】（小磁盘图标），起一个名字（例如 0.20mm Standard @BBL P2S 后处理），点击确认。
+<img width="865" height="498" alt="image" src="https://github.com/user-attachments/assets/06308bc9-3158-4a1a-bf03-ee5755870c48" />
 
 方便日常切换：
 以后在打印时，只需要在工艺下拉菜单中直接选择这个带有后处理的预设，每次完成切片并导出/打印时，就会自动弹出多色扣减窗口上报克重！
