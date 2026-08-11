@@ -33,52 +33,6 @@
 2. 准备源码目录
 在 1Panel 的 【文件】 管理器中，将本项目的 backend 和 frontend 文件夹上传至服务器同一个目录下（例如 /opt/bambu-filament-manager）：
 
-Plaintext
-/opt/bambu-filament-manager/
-├── backend/            # 存放后端 main.py 与 requirements.txt
-└── frontend/           # 存放前端 index.html
-3. 创建 Docker Compose 编排
-打开 1Panel ➔ 【容器】 ➔ 【编排】 ➔ 点击 【创建编排】。
-
-路径选择刚才上传源码的目录 /opt/bambu-filament-manager。
-
-将以下编排配置复制粘贴进去（请修改为您自己的数据库密码与 JWT 密钥）：
-
-YAML
-services:
-  filament-api:
-    image: python:3.11-slim
-    container_name: filament-api
-    restart: always
-    working_dir: /app
-    volumes:
-      - ./backend:/app       # 挂载 backend 目录
-      - ./frontend:/frontend # 挂载 frontend 目录
-    deploy:
-      resources:
-        limits:
-          memory: 300M      # 限制最大内存，防止爆内存
-    command: >
-      bash -c "pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple 
-      && uvicorn main:app --host 0.0.0.0 --port 8000"
-    environment:
-      - DB_HOST=172.17.0.1  # Docker 默认网关 IP，可直接连接宿主机/1Panel 数据库
-      - DB_PORT=3306
-      - DB_USER=你的数据库用户名
-      - DB_PASS=你的数据库密码
-      - DB_NAME=filament_db
-      - JWT_SECRET=你的自定义JWT随机密钥
-    ports:
-      - "8000:8000"         # 映射 8000 端口给反向代理使用
-点击 【确定】，1Panel 会自动拉取镜像并启动服务。
-
-4. 配置反向代理与域名
-在 1Panel ➔ 【网站】 ➔ 【创建网站】 ➔ 选择 【反向代理】。
-
-填入你的域名，代理目标地址指向 [http://127.0.0.1:8000](http://127.0.0.1:8000)。
-
-浏览器访问你的域名，即可直接打开并使用耗材管理系统！
-
 
 💻 二、客户端配置与 BambuStudio 设置教程
 1. 获取 API Key 与新建耗材
