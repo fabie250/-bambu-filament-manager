@@ -18,10 +18,10 @@ from jose import JWTError, jwt
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("filament_system")
 
-# ----------------- 数据库与安全密钥配置 -----------------
+# ----------------- 数据库与安全密钥配置 (脱敏占位符) -----------------
 DB_USER = os.getenv("DB_USER", "你的数据库用户名")
 DB_PASS = os.getenv("DB_PASS", "你的数据库密码")
-DB_HOST = os.getenv("DB_HOST", "你的数据库服务器IP或域名")
+DB_HOST = os.getenv("DB_HOST", "你的数据库服务器IP或网关")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "你的数据库名称")
 
@@ -104,7 +104,7 @@ except Exception:
     pass
 
 # ----------------- FastAPI 初始化 -----------------
-app = FastAPI(title="拓竹耗材与打印机管理系统 API", version="1.0.0")
+app = FastAPI(title="拓竹耗材与打印机管理系统 API", version="1.8.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -305,14 +305,19 @@ def adjust_filament_weight(
     if not filament:
         raise HTTPException(status_code=404, detail="耗材不存在或无权访问")
 
+    # 计算变动后的剩余重量
     filament.current_weight_g = max(0.0, round(filament.current_weight_g - data.adjust_weight_g, 2))
     
+    # 区分增加还是减少
+    action_str = "手动增加" if data.adjust_weight_g < 0 else "手动减少"
+    task_desc = f"{action_str} ({data.reason})" if data.reason else action_str
+
     record = UsageRecord(
         filament_id=filament_id,
         used_weight_g=data.adjust_weight_g,
         remaining_weight_g=filament.current_weight_g,
         source="manual",
-        task_name=f"手动调整 ({data.reason})",
+        task_name=task_desc,
         user_id=user.id
     )
     db.add(record)
