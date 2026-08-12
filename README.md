@@ -110,7 +110,9 @@ services:
 ### 2. 客户端配置（v2.7 Beta 无感模式推荐）
 1. **下载客户端**：前往仓库右侧的 **Releases** 页面下载最新版本的客户端程序（如 `BambuFilamentStudio_v2.7_beta.exe`）。
 2. **安全存储密钥**：打开客户端切换至 **【服务设置】**，填入你的服务地址与 API Key 并点击保存。API Key 将被自动写入 **Windows 凭据管理器（Vault）** 进行硬件级加密保护。
+   <img width="867" height="830" alt="image" src="https://github.com/user-attachments/assets/68dec9c7-121b-4f12-9e4d-7f13977b0f59" />
 3. **开启自动监听**：确认设置中的 **“切片打印自动监听”** 处于开启状态。
+<img width="878" height="837" alt="image" src="https://github.com/user-attachments/assets/e4a05a92-88b6-4e10-be71-0b56a134f429" />
 
 > ✨ **v2.7+ 核心优势**：在切片软件（Bambu Studio / OrcaSlicer）中无需进行任何“后处理脚本”配置，直接打开任意 `.3mf` 模型并点击 **【打印单盘 / 发送】**，助手弹窗就会自动跳转唤醒，且 **100% 完好保留原作者的所有特殊工艺参数**！
 
