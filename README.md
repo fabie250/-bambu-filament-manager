@@ -318,6 +318,7 @@ filament_db.db
    ↓
 开启自动监听
 ```
+<img width="1668" height="784" alt="image" src="https://github.com/user-attachments/assets/bf71ffcb-91a8-4e6e-9a23-830adb80abeb" />
 
 ---
 
@@ -341,6 +342,7 @@ filament_db.db
 颜色：白色
 初始重量：1000g
 ```
+<img width="1668" height="784" alt="image" src="https://github.com/user-attachments/assets/207d2582-7c43-403d-ae02-3cdadcfc3fce" />
 
 ---
 
@@ -385,6 +387,7 @@ API-Key
 ```
 
 然后测试连接。
+<img width="845" height="673" alt="image" src="https://github.com/user-attachments/assets/b274138b-0454-4ac2-a1bd-810ebaf97693" />
 
 客户端会将密钥安全保存到 Windows 凭据管理器中。
 
@@ -397,6 +400,7 @@ API-Key
 ```text
 切片打印自动监听
 ```
+<img width="865" height="838" alt="image" src="https://github.com/user-attachments/assets/5641d21b-e853-412f-9856-27a39a566a7e" />
 
 启用后即可正常使用 Bambu Studio。
 
