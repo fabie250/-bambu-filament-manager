@@ -117,7 +117,7 @@ services:
 ---
 
 <details>
-<summary><b>点击展开：老版本（v2.5 及以下）手动配置 BambuStudio 后处理脚本教程（已废弃/备用）</b></summary>
+<summary><b>点击展开：老版本（v2.4beta 及以下）手动配置 BambuStudio 后处理脚本教程（已废弃/备用）</b></summary>
 
 <br>
 
