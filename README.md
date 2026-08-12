@@ -95,56 +95,59 @@ services:
 
 注意！最好在路由器进行DHCP静态分配或者使用静态IP 防止IP变化
 
-💻 二、客户端配置与 BambuStudio 设置教程
-1. 获取 API Key 与新建耗材
-注册与登录：
-打开你的管理系统网页端，首先注册并登录账号。
-<img width="865" height="388" alt="image" src="https://github.com/user-attachments/assets/b9e3424d-2006-4e61-8da3-14726ee65bbb" />
+💻 二、 客户端配置与使用教程
 
-生成 API Key：
-登录成功后，在后台首页点击 【生成/重置我的脚本 API Key】 按钮，复制生成的 API Key 备用。
-<img width="865" height="590" alt="image" src="https://github.com/user-attachments/assets/14f50b5e-5969-42cd-9979-18f52d5f7eed" />
+### 1. Web 网页端准备与 API Key 获取
+* **注册与登录**：打开管理系统网页端，注册并登录你的个人账号。
+  <img width="865" height="388" alt="image" src="https://github.com/user-attachments/assets/b9e3424d-2006-4e61-8da3-14726ee65bbb" />
+* **生成 API Key**：登录成功后，在后台首页点击 **【生成/重置我的脚本 API Key】** 按钮，复制生成的 API Key 备用。
+  <img width="865" height="590" alt="image" src="https://github.com/user-attachments/assets/14f50b5e-5969-42cd-9979-18f52d5f7eed" />
+* **新增耗材档案**：在“手动新增耗材档案”区域，填入品牌、材质、颜色及初始重量（默认 1000g）并保存。在“我的耗材台账”中可随时查看或调整耗材剩余克重。
+  <img width="865" height="233" alt="image" src="https://github.com/user-attachments/assets/738846ae-2e15-413b-aeb3-4ba09353ce04" />
 
-新增耗材档案：
-在“手动新增耗材档案”区域，填入品牌、材质、颜色及初始重量（默认 1000g）并保存。在下面的“我的耗材台账”中可随时查看或调整耗材剩余克重。
-<img width="865" height="233" alt="image" src="https://github.com/user-attachments/assets/738846ae-2e15-413b-aeb3-4ba09353ce04" />
+---
 
-2. 客户端获取与配置文件生成
-下载客户端程序：
-前往本仓库右侧的 Releases 页面下载打包好的 bambu_post_process.exe 客户端程序（或直接下载预编译版本）。
+### 2. 客户端配置（v2.7 Beta 无感模式推荐）
+1. **下载客户端**：前往仓库右侧的 **Releases** 页面下载最新版本的客户端程序（如 `BambuFilamentStudio_v2.7_beta.exe`）。
+2. **安全存储密钥**：打开客户端切换至 **【服务设置】**，填入你的服务地址与 API Key 并点击保存。API Key 将被自动写入 **Windows 凭据管理器（Vault）** 进行硬件级加密保护。
+3. **开启自动监听**：确认设置中的 **“切片打印自动监听”** 处于开启状态。
 
-首次运行生成配置：
-双击运行一次 bambu_post_process.exe。运行后稍等片刻，程序会在同级目录下自动生成 config.json 与 log.txt 文件。
-<img width="865" height="147" alt="image" src="https://github.com/user-attachments/assets/4d5b29df-7f59-453b-a13a-2c477a53ee14" />
+> ✨ **v2.7+ 核心优势**：在切片软件（Bambu Studio / OrcaSlicer）中无需进行任何“后处理脚本”配置，直接打开任意 `.3mf` 模型并点击 **【打印单盘 / 发送】**，助手弹窗就会自动跳转唤醒，且 **100% 完好保留原作者的所有特殊工艺参数**！
 
-修改 API Key：
-右键点击 config.json ➔ 选择 【用记事本打开】，将其中的 api_key 替换为你刚才在网页端复制的专属 API Key 并保存。
-<img width="653" height="161" alt="image" src="https://github.com/user-attachments/assets/655a90dc-069b-4a79-aa33-1f892bb032cc" />
+---
 
-3. 在 BambuStudio 中绑定后处理脚本
-获取程序绝对路径：
-找到下载好的 bambu_post_process.exe，按住键盘 Shift 键右键点击文件，选择 【复制文件地址】（或右键菜单中的复制文件路径）。
+<details>
+<summary><b>点击展开：老版本（v2.5 及以下）手动配置 BambuStudio 后处理脚本教程（已废弃/备用）</b></summary>
+
+<br>
+
+> ⚠️ **注意**：使用 v2.7 Beta 及以上版本的用户请忽略此折叠教程。
+
+#### 1. 复制程序绝对路径
+在客户端【服务设置】页面中点击 **[一键复制路径]**，或选中客户端 `.exe` 程序按住键盘 `Shift` 键右键点击选择 **【复制文件地址】**。
 <img width="714" height="734" alt="image" src="https://github.com/user-attachments/assets/be69b827-5201-41f1-b66c-9504c22ff049" />
 
-填入 BambuStudio 后处理脚本：
-打开 BambuStudio ➔ 切换到左侧 【工艺】 标签页 ➔ 选择 【其他】 ➔ 滚动到最底部的 【后处理脚本】 框内，直接粘贴刚复制的文件地址（保持带双引号格式）。
+#### 2. 填入 BambuStudio 后处理脚本
+打开 BambuStudio ➔ 切换到左侧 **【工艺】** 标签页 ➔ 选择 **【其他】** ➔ 滚动到最底部的 **【后处理脚本】** 框内，直接粘贴刚复制的文件地址（保持带双引号格式）。
 <img width="865" height="447" alt="image" src="https://github.com/user-attachments/assets/d878d9d7-f2ee-40c1-a093-8778b0d44a2a" />
 
-另存为用户预设：
-点击工艺右上角的 【保存预设】（小磁盘图标），起一个名字（例如 0.20mm Standard @BBL P2S 后处理），点击确认。
+#### 3. 另存为用户预设
+点击工艺右上角的 **【保存预设】**（小磁盘图标），起一个名字（例如 `0.20mm Standard @BBL P2S 后处理`），点击确认。
 <img width="865" height="498" alt="image" src="https://github.com/user-attachments/assets/06308bc9-3158-4a1a-bf03-ee5755870c48" />
 
-方便日常切换：
-以后在打印时，只需要在工艺下拉菜单中直接选择这个带有后处理的预设，每次完成切片并导出/打印时，就会自动弹出多色扣减窗口上报克重！
+#### 4. 日常使用
+打印时只需在工艺下拉菜单中选择这个带有后处理的预设，每次完成切片并导出/打印时，就会自动弹出多色扣减窗口上报克重。
+
+---
+</details>
+
+---
 
 🔮 路线规划 (Roadmap)
-[x] Web 台账与多租户 API Key 隔离
-
-[x] 多色切片 G-code 自动解析与槽位记忆
-
-[x] 历史明细自定义退还克重与快捷补扣
-
-[ ] Windows 专属桌面客户端：后续将推出带系统托盘、本地多色看板、耗材刻度快速校准与一键管理功能独立 GUI 桌面程序，敬请期待！
-
+- [x] Web 台账与多租户 API Key 隔离
+- [x] 多色切片 G-code 自动解析与槽位记忆
+- [x] 历史明细自定义退还克重与快捷补扣
+- [x] Windows 专属桌面客户端（GUI 现代化界面、Windows 凭据库硬件加密存 Key、历史记录撤销与手动增减）
+- [x] 无感文件监听与后处理自动匹配（无需覆盖修改任何切片工艺参数，直接点击【打印】即可自动唤醒）
 📄 开源许可
 本项目基于 MIT License 协议开源。欢迎 Fork、Star 和 Issue 提交改进建议！
