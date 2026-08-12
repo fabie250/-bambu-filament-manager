@@ -18,16 +18,16 @@ from jose import JWTError, jwt
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("filament_system")
 
-# ----------------- 数据库与安全密钥配置 (脱敏占位符) -----------------
-DB_USER = os.getenv("DB_USER", "你的数据库用户名")
-DB_PASS = os.getenv("DB_PASS", "你的数据库密码")
-DB_HOST = os.getenv("DB_HOST", "你的数据库服务器IP或网关")
+# ----------------- 数据库与安全密钥配置 -----------------
+DB_USER = os.getenv("DB_USER", "Filament_admin")
+DB_PASS = os.getenv("DB_PASS", "hhDJMiEzGdQkxt7j")
+DB_HOST = os.getenv("DB_HOST", "172.17.0.1")
 DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "你的数据库名称")
+DB_NAME = os.getenv("DB_NAME", "filament_db")
 
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 
-SECRET_KEY = os.getenv("JWT_SECRET", "你的自定义JWT随机加密密钥")
+SECRET_KEY = os.getenv("JWT_SECRET", "bambu-filament-secret-key-change-in-prod")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -114,7 +114,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 多路径挂载前端，增强兼容性
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 possible_paths = [
     os.path.join(CURRENT_DIR, "frontend"),
@@ -292,6 +291,7 @@ def create_filament(f: FilamentCreate, user: User = Depends(get_current_user), d
 def list_filaments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Filament).filter(Filament.user_id == user.id).all()
 
+# 客户端与脚本专用接口（基于 API Key 鉴权）
 @app.get("/api/ingest/script-filaments", tags=["自动采集接入"])
 def get_filaments_for_script(user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     filaments = db.query(Filament).filter(Filament.user_id == user.id).all()
@@ -301,10 +301,77 @@ def get_filaments_for_script(user: User = Depends(verify_script_api_key), db: Se
             "brand": f.brand,
             "material": f.material,
             "color_name": f.color_name,
-            "current_weight_g": f.current_weight_g
+            "color_hex": f.color_hex,
+            "initial_weight_g": f.initial_weight_g,
+            "current_weight_g": f.current_weight_g,
+            "price": f.price
         }
         for f in filaments
     ]
+
+@app.post("/api/ingest/script-report-create", response_model=FilamentOut, tags=["自动采集接入"])
+def create_filament_for_script(f: FilamentCreate, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    filament = Filament(**f.dict(), user_id=user.id)
+    db.add(filament)
+    db.commit()
+    db.refresh(filament)
+    return filament
+
+@app.delete("/api/ingest/script-report-delete/{filament_id}", tags=["自动采集接入"])
+def delete_filament_for_script(filament_id: int, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    filament = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
+    if not filament:
+        raise HTTPException(status_code=404, detail="耗材不存在")
+    db.query(UsageRecord).filter(UsageRecord.filament_id == filament_id).delete()
+    db.delete(filament)
+    db.commit()
+    return {"status": "success", "message": "删除成功"}
+
+# 客户端专用的日志查询与撤销（附带防越权锁）
+@app.get("/api/ingest/script-filament-logs/{filament_id}", tags=["自动采集接入"])
+def get_filament_logs_for_script(
+    filament_id: int, 
+    user: User = Depends(verify_script_api_key), 
+    db: Session = Depends(get_db)
+):
+    filament = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
+    if not filament:
+        raise HTTPException(status_code=404, detail="耗材不存在或无权访问")
+
+    records = db.query(UsageRecord).filter(
+        UsageRecord.filament_id == filament_id,
+        UsageRecord.user_id == user.id
+    ).order_by(UsageRecord.id.desc()).all()
+    
+    res = []
+    for r in records:
+        created_time = r.created_at + datetime.timedelta(hours=8) if r.created_at else None
+        res.append({
+            "id": r.id,
+            "task_name": r.task_name,
+            "used_weight_g": r.used_weight_g,
+            "remaining_weight_g": r.remaining_weight_g,
+            "created_at": created_time.strftime("%Y-%m-%d %H:%M:%S") if created_time else ""
+        })
+    return res
+
+@app.delete("/api/ingest/script-undo-record/{record_id}", tags=["自动采集接入"])
+def delete_record_for_script(
+    record_id: int, 
+    user: User = Depends(verify_script_api_key), 
+    db: Session = Depends(get_db)
+):
+    record = db.query(UsageRecord).filter(UsageRecord.id == record_id, UsageRecord.user_id == user.id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="记录不存在或无权操作")
+
+    filament = db.query(Filament).filter(Filament.id == record.filament_id, Filament.user_id == user.id).first()
+    if filament and record.used_weight_g != 0:
+        filament.current_weight_g = max(0.0, round(filament.current_weight_g + record.used_weight_g, 2))
+
+    db.delete(record)
+    db.commit()
+    return {"status": "success", "message": "记录已撤销"}
 
 @app.post("/api/filaments/{filament_id}/adjust-weight", tags=["耗材台账"])
 def adjust_filament_weight(
@@ -346,7 +413,6 @@ def get_filament_usage_logs(filament_id: int, user: User = Depends(get_current_u
             r.created_at = r.created_at + datetime.timedelta(hours=8)
     return records
 
-# 支持正负对冲（允许撤销增加记录）
 @app.delete("/api/usage-records/{record_id}", tags=["耗材台账"])
 def delete_usage_record(
     record_id: int, 
