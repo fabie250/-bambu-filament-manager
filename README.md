@@ -346,7 +346,7 @@ filament_db.db
 
 ---
 
-# ⭐ v2.7 Beta：无感监听模式
+# ⭐ 无感监听模式
 
 > **强烈推荐使用此方式。**
 
@@ -363,13 +363,9 @@ v2.7 Beta 起：
 
 ## 1. 下载客户端
 
-在项目 GitHub Releases 中下载：
+在项目 GitHub Releases 中下载BambuFilamentStudio_v2.7_beta.exe 以上的文件：
 
-```text
-BambuFilamentStudio_v2.7_beta.exe
-```
 
----
 
 ## 2. 配置服务器
 
