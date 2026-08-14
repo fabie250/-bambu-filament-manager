@@ -1,7 +1,9 @@
 import os
+import sys
 import datetime
 import secrets
 import logging
+import hashlib
 from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -10,15 +12,13 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
-from passlib.context import CryptContext
+from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 from jose import JWTError, jwt
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("filament_system")
 
-# ----------------- 数据库与安全密钥配置 -----------------
+# ----------------- 1. Linux MySQL 数据库与安全配置 -----------------
 DB_USER = os.getenv("DB_USER", "Filament_admin")
 DB_PASS = os.getenv("DB_PASS", "hhDJMiEzGdQkxt7j")
 DB_HOST = os.getenv("DB_HOST", "172.17.0.1")
@@ -32,14 +32,13 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-# ----------------- ORM 模型 -----------------
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=3600)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+# ----------------- 2. ORM 模型定义 -----------------
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -103,8 +102,8 @@ try:
 except Exception:
     pass
 
-# ----------------- FastAPI 初始化 -----------------
-app = FastAPI(title="拓竹耗材与打印机管理系统 API", version="1.8.0")
+# ----------------- 3. FastAPI 初始化与静态资源托管 -----------------
+app = FastAPI(title="拓竹耗材与打印机管理系统 API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -133,7 +132,7 @@ def read_index():
         idx = os.path.join(p, "index.html")
         if os.path.exists(idx):
             return FileResponse(idx)
-    return {"status": "success", "message": "API 服务运行正常"}
+    return {"status": "success", "message": "API 服务运行正常 (MySQL)"}
 
 def get_db():
     db = SessionLocal()
@@ -142,7 +141,7 @@ def get_db():
     finally:
         db.close()
 
-# ----------------- Pydantic 结构体 -----------------
+# ----------------- 4. Pydantic 结构体 -----------------
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -206,12 +205,19 @@ class ScriptReportData(BaseModel):
     printer_id: Optional[int] = None
     task_name: Optional[str] = None
 
-# ----------------- 安全鉴权逻辑 -----------------
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
+# ----------------- 5. 标准库 hashlib 安全哈希 (解决 bcrypt 兼容性) -----------------
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = os.urandom(16).hex()
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+    return f"{salt}${pwd_hash}"
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        salt, pwd_hash = hashed_password.split('$')
+        check_hash = hashlib.pbkdf2_hmac('sha256', plain_password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+        return check_hash == pwd_hash
+    except Exception:
+        return False
 
 def create_token(data: dict, expires_delta: datetime.timedelta) -> str:
     to_encode = data.copy()
@@ -249,7 +255,7 @@ def verify_script_api_key(
         raise HTTPException(status_code=401, detail="API Key 无效或已禁用")
     return db_key.owner
 
-# ----------------- API 接口 -----------------
+# ----------------- 6. API 接口定义 -----------------
 @app.post("/api/auth/register", tags=["账号管理"])
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == user_data.username).first():
@@ -291,7 +297,6 @@ def create_filament(f: FilamentCreate, user: User = Depends(get_current_user), d
 def list_filaments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Filament).filter(Filament.user_id == user.id).all()
 
-# 客户端与脚本专用接口（基于 API Key 鉴权）
 @app.get("/api/ingest/script-filaments", tags=["自动采集接入"])
 def get_filaments_for_script(user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     filaments = db.query(Filament).filter(Filament.user_id == user.id).all()
@@ -327,7 +332,6 @@ def delete_filament_for_script(filament_id: int, user: User = Depends(verify_scr
     db.commit()
     return {"status": "success", "message": "删除成功"}
 
-# 客户端专用的日志查询与撤销（附带防越权锁）
 @app.get("/api/ingest/script-filament-logs/{filament_id}", tags=["自动采集接入"])
 def get_filament_logs_for_script(
     filament_id: int, 
@@ -355,6 +359,7 @@ def get_filament_logs_for_script(
         })
     return res
 
+# 方案1核心：客户端精准时空快照回退
 @app.delete("/api/ingest/script-undo-record/{record_id}", tags=["自动采集接入"])
 def delete_record_for_script(
     record_id: int, 
@@ -366,12 +371,21 @@ def delete_record_for_script(
         raise HTTPException(status_code=404, detail="记录不存在或无权操作")
 
     filament = db.query(Filament).filter(Filament.id == record.filament_id, Filament.user_id == user.id).first()
-    if filament and record.used_weight_g != 0:
-        filament.current_weight_g = max(0.0, round(filament.current_weight_g + record.used_weight_g, 2))
+    if filament:
+        prev_record = db.query(UsageRecord).filter(
+            UsageRecord.filament_id == filament.id,
+            UsageRecord.user_id == user.id,
+            UsageRecord.id < record.id
+        ).order_by(UsageRecord.id.desc()).first()
+
+        if prev_record and prev_record.remaining_weight_g is not None:
+            filament.current_weight_g = max(0.0, round(prev_record.remaining_weight_g, 2))
+        else:
+            filament.current_weight_g = round(filament.initial_weight_g, 2)
 
     db.delete(record)
     db.commit()
-    return {"status": "success", "message": "记录已撤销"}
+    return {"status": "success", "message": "记录已撤销，耗材余量已精准恢复到变动前快照状态"}
 
 @app.post("/api/filaments/{filament_id}/adjust-weight", tags=["耗材台账"])
 def adjust_filament_weight(
@@ -413,6 +427,7 @@ def get_filament_usage_logs(filament_id: int, user: User = Depends(get_current_u
             r.created_at = r.created_at + datetime.timedelta(hours=8)
     return records
 
+# 方案1核心：网页后台精准时空快照回退
 @app.delete("/api/usage-records/{record_id}", tags=["耗材台账"])
 def delete_usage_record(
     record_id: int, 
@@ -426,14 +441,24 @@ def delete_usage_record(
 
     filament = db.query(Filament).filter(Filament.id == record.filament_id, Filament.user_id == user.id).first()
     
-    actual_refund = refund_weight_g if refund_weight_g is not None else record.used_weight_g
-    
-    if filament and actual_refund != 0:
-        filament.current_weight_g = max(0.0, round(filament.current_weight_g + actual_refund, 2))
+    if filament:
+        if refund_weight_g is not None:
+            filament.current_weight_g = max(0.0, round(filament.current_weight_g + refund_weight_g, 2))
+        else:
+            prev_record = db.query(UsageRecord).filter(
+                UsageRecord.filament_id == filament.id,
+                UsageRecord.user_id == user.id,
+                UsageRecord.id < record.id
+            ).order_by(UsageRecord.id.desc()).first()
+
+            if prev_record and prev_record.remaining_weight_g is not None:
+                filament.current_weight_g = max(0.0, round(prev_record.remaining_weight_g, 2))
+            else:
+                filament.current_weight_g = round(filament.initial_weight_g, 2)
 
     db.delete(record)
     db.commit()
-    return {"status": "success", "message": f"记录已删除，已成功处理 {actual_refund}g 耗材变更"}
+    return {"status": "success", "message": "记录已删除，已精确恢复耗材历史数据"}
 
 @app.delete("/api/filaments/{filament_id}", tags=["耗材台账"])
 def delete_filament(filament_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
