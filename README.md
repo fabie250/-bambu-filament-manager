@@ -1,17 +1,15 @@
 # 拓竹 3D 打印耗材管理系统
+## Bambu Lab Filament Manager
 
-> **Bambu Lab Filament Manager**  
-> 面向拓竹（Bambu Lab）3D 打印机用户的轻量级耗材库存与打印自动扣减系统。
-> 本项目为社区开发的第三方开源工具，
-支持 **多账号数据隔离、Web 耗材台账、AMS 多色打印自动解析、打印损耗补扣、误扣克重撤销** 等功能。
-字体说明
+面向拓竹（Bambu Lab）3D 打印机用户的轻量级耗材库存与打印自动扣减系统，为社区开发的第三方开源工具。
+
+支持多账号数据隔离、Web 端耗材台账、AMS 多色打印耗材自动解析、打印损耗补扣、误扣克重一键撤销等功能。
+
+### 字体说明
 本软件界面使用 MiSans 字体。
-MiSans 字体版权归小米科技有限责任公司及相关权利方所有。
-字体使用遵循 MiSans 字体知识产权许可协议。
+MiSans 字体版权归小米科技有限责任公司及相关权利方所有，使用需遵循 MiSans 字体知识产权许可协议。
 
-MiSans 官方网站：
-https://hyperos.mi.com/font/
----
+MiSans 官方网站：https://hyperos.mi.com/font/
 
 ## ✨ 功能亮点
 
