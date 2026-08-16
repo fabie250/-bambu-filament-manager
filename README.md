@@ -11,6 +11,8 @@ MiSans 字体版权归小米科技有限责任公司及相关权利方所有，�
 
 MiSans 官方网站：https://hyperos.mi.com/font/
 
+在BambuFilamentStudio_v3.0.3 版本以上有单独的的Windows客户端，可以在不部署服务器的前提下直接使用，但是无法局域网和互联网使用只能单机使用
+
 ## ✨ 功能亮点
 
 | 功能 | 说明 |
