@@ -2,75 +2,124 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拓竹耗材与打印机管理系统 / Filament Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拓竹耗材与打印机管理系统 / Filament Manager v3.1.0</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f0f2f5; color: #1f2937; padding: 20px; }
-        .container { max-width: 1100px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 25px; }
-        .header h2 { font-size: 22px; color: #111827; font-weight: 700; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #374151; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-        .btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-align: center; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #f0f2f5; color: #1f2937; padding: 12px; }
+        .container { max-width: 1160px; margin: 0 auto; background: #ffffff; padding: 20px 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { font-size: 20px; color: #111827; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        
+        /* 移动端横向平滑滚动导航 */
+        .nav-tabs { display: flex; gap: 6px; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; padding-bottom: 8px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { background: transparent; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; color: #6b7280; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+        .tab-btn:hover { background: #f3f4f6; color: #111827; }
+        .tab-btn.active { background: #10b981; color: #ffffff; }
+
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #374151; }
+        input, select { width: 100%; height: 38px; padding: 0 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; outline: none; background: #fff; }
+        input:focus, select:focus { border-color: #10b981; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        
+        .btn { border: none; height: 36px; padding: 0 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-align: center; display: inline-flex; align-items: center; justify-content: center; transition: opacity 0.15s; user-select: none; }
+        .btn:active { opacity: 0.8; }
         .btn-primary { background: #10b981; color: #ffffff; }
         .btn-secondary { background: #4b5563; color: #ffffff; }
         .btn-blue { background: #2563eb; color: #ffffff; }
         .btn-purple { background: #8b5cf6; color: #ffffff; }
         .btn-amber { background: #f59e0b; color: #ffffff; }
         .btn-danger { background: #ef4444; color: #ffffff; }
-        .alert-msg { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+        
+        .alert-msg { margin-top: 15px; padding: 12px; border-radius: 6px; font-size: 13px; display: none; }
         .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; display: block; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; display: block; }
-        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-top: 20px; }
+        
+        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
         .hidden { display: none !important; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; border-radius: 6px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-        th { background: #f3f4f6; font-weight: 600; }
-        .color-badge { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: middle; margin-right: 6px; border: 1px solid #ccc; }
-        .code-box { background: #1e293b; color: #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; margin-top: 8px; }
+        
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; background: #fff; border-radius: 6px; overflow: hidden; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        th { background: #f3f4f6; font-weight: 600; color: #374151; white-space: nowrap; }
+        
+        .color-badge { display: inline-block; width: 13px; height: 13px; border-radius: 50%; vertical-align: middle; margin-right: 5px; border: 1px solid #ccc; }
+        .code-box { background: #1e293b; color: #38bdf8; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; margin-top: 8px; }
+        .badge-warning { background: #fee2e2; color: #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 4px; }
+        
+        /* 统计网格 */
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; border-left: 4px solid #10b981; }
+        .stat-title { font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: #111827; }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 1000;
-            display: flex; justify-content: center; align-items: center;
+        /* 模态框 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 10px; }
+        .modal-content { background: #ffffff; width: 840px; max-width: 100%; max-height: 90vh; border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
+        .modal-body { overflow-y: auto; margin-top: 12px; flex: 1; }
+        .close-btn { font-size: 24px; cursor: pointer; color: #6b7280; font-weight: bold; line-height: 1; padding: 0 4px; }
+
+        /* 打印机 AMS 槽位自适应 */
+        .ams-slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+        /* ====== 手机端特化媒体查询 (<= 768px) ====== */
+        @media (max-width: 768px) {
+            body { padding: 8px; }
+            .container { padding: 14px; border-radius: 8px; }
+            .header h2 { font-size: 17px; }
+            .header { margin-bottom: 12px; padding-bottom: 10px; }
+            
+            .form-row { grid-template-columns: 1fr; gap: 8px; }
+            .stat-grid { grid-template-columns: 1fr; gap: 8px; }
+            .ams-slots-grid { grid-template-columns: repeat(2, 1fr); }
+
+            /* 数据大屏两列转单列 */
+            .analytics-split { grid-template-columns: 1fr !important; }
+
+            /* 移动端模态弹窗满屏 */
+            .modal-content { max-height: 94vh; padding: 16px; }
+
+            /* 表格在移动端以清晰紧凑卡片呈现 */
+            .table-mobile-cards thead { display: none; }
+            .table-mobile-cards tbody, 
+            .table-mobile-cards tr, 
+            .table-mobile-cards td { display: block; width: 100%; }
+            .table-mobile-cards tr { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 10px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+            .table-mobile-cards td { border-bottom: 1px dashed #f1f5f9; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+            .table-mobile-cards td:last-child { border-bottom: none; padding-top: 8px; justify-content: flex-end; gap: 6px; }
+            .table-mobile-cards td::before { content: attr(data-label); font-weight: 600; color: #64748b; font-size: 12px; }
+            .table-mobile-cards td:last-child::before { display: none; }
         }
-        .modal-content {
-            background: #ffffff; width: 880px; max-width: 95%; max-height: 85vh;
-            border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: flex; flex-direction: column;
-        }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
-        .modal-body { overflow-y: auto; margin-top: 15px; flex: 1; }
-        .close-btn { font-size: 24px; cursor: pointer; color: #6b7280; font-weight: bold; }
-        .badge-used { color: #ef4444; font-weight: bold; }
-        .badge-add { color: #10b981; font-weight: bold; }
-        .task-name-box { font-family: monospace; font-size: 13px; color: #1e293b; word-break: break-all; }
-        .price-tag { font-size: 12px; color: #6b7280; margin-left: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2>拓竹耗材与打印机管理系统</h2>
+        <h2>✨ 拓竹耗材台账 <span style="font-size: 11px; background: #10b981; color: #fff; padding: 2px 6px; border-radius: 10px;">v3.1.0</span></h2>
+        <div id="userHeaderBox" class="hidden" style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: space-between;">
+            <span style="font-size: 13px; font-weight: 600;">用户：<strong id="currentUser" style="color: #2563eb;"></strong></span>
+            <button class="btn btn-secondary" onclick="logout()" style="height: 30px; padding: 0 10px; font-size: 12px;">退出登录</button>
+        </div>
     </div>
 
     <!-- 1. 登录注册模块 -->
     <div id="authSection">
-        <div class="card">
-            <h3 style="margin-bottom: 15px;">账号登录与注册</h3>
+        <div class="card" style="max-width: 480px; margin: 20px auto;">
+            <h3 style="margin-bottom: 12px;">账号登录与注册</h3>
             <div class="form-group">
                 <label>用户名</label>
-                <input type="text" id="username" placeholder="请输入用户名">
+                <input type="text" id="username" placeholder="请输入用户名" autocomplete="username">
             </div>
             <div class="form-group">
                 <label>密码</label>
-                <input type="password" id="password" placeholder="请输入密码">
+                <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
             </div>
-            <div style="display: flex; gap: 12px; margin-top: 20px;">
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
                 <button class="btn btn-primary" onclick="handleLogin()" style="flex: 1;">登录系统</button>
                 <button class="btn btn-secondary" onclick="handleRegister()" style="flex: 1;">注册新账号</button>
             </div>
@@ -80,85 +129,220 @@
 
     <!-- 2. 主控制台 -->
     <div id="mainSection" class="hidden">
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span style="font-size: 16px; font-weight: 600;">当前登录账户：</span>
-                <span id="currentUser" style="font-weight: bold; color: #2563eb;"></span>
-            </div>
-            <button class="btn btn-secondary" onclick="logout()" style="width: auto;">退出登录</button>
+        <!-- 导航选项卡 -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">📦 耗材台账</button>
+            <button class="tab-btn" onclick="switchTab('printers')">🖨️ 设备管理 (AMS)</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">📊 数据洞察</button>
+            <button class="tab-btn" onclick="switchTab('shopping')">🛒 补货清单</button>
+            <button class="tab-btn" onclick="switchTab('apikeys')">🔑 API 密钥</button>
         </div>
 
-        <div class="card">
-            <h3>🔑 后处理脚本 API 密钥 (X-API-Key)</h3>
-            <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">复制生成的 API Key 填入 Windows 端的配置文件中，系统即可精准判断数据归属。</p>
-            <div style="margin-top: 12px; display: flex; gap: 10px;">
-                <button class="btn btn-blue" onclick="generateApiKey()">生成/重置我的脚本 API Key</button>
+        <!-- 视图 1: 耗材台账 -->
+        <div id="tab_dashboard">
+            <div class="card">
+                <h3>➕ 新增耗材档案 (支持批量录入)</h3>
+                <div class="form-row" style="margin-top: 12px;">
+                    <div class="form-group">
+                        <label>品牌</label>
+                        <input type="text" id="f_brand" value="Bambu Lab">
+                    </div>
+                    <div class="form-group">
+                        <label>材质</label>
+                        <input type="text" id="f_material" placeholder="如 PLA / PETG">
+                    </div>
+                    <div class="form-group">
+                        <label>颜色名称与 HEX</label>
+                        <div style="display: flex; gap: 6px;">
+                            <input type="text" id="f_color_name" placeholder="如 基础绿">
+                            <input type="color" id="f_color_hex" value="#00AE42" style="width: 48px; padding: 2px; height: 38px; cursor: pointer;">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>初始重量 (克/g)</label>
+                        <input type="number" id="f_weight" value="1000" inputmode="decimal">
+                    </div>
+                    <div class="form-group">
+                        <label>购买单价 (元)</label>
+                        <input type="number" id="f_price" value="99" inputmode="decimal">
+                    </div>
+                    <div class="form-group">
+                        <label>批量入库数量 (卷)</label>
+                        <input type="number" id="f_count" value="1" min="1" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>购买链接 (选填)</label>
+                    <input type="text" id="f_purchase_url" placeholder="粘贴购买商品链接 (如 淘宝/拼多多)">
+                </div>
+                <button class="btn btn-primary" onclick="addFilament()" style="width: 100%; margin-top: 4px; height: 40px;">保存耗材入库</button>
             </div>
-            <div id="apiKeyDisplay" class="code-box hidden">尚未生成 API Key</div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3>在册耗材清单</h3>
+                    <button class="btn btn-blue" onclick="loadFilaments()" style="height: 30px; font-size: 12px; padding: 0 10px;">🔄 刷新列表</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>品牌</th>
+                                <th>材质</th>
+                                <th>颜色</th>
+                                <th>剩余存量 / 价值</th>
+                                <th>买入原价</th>
+                                <th>购买链接</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="filamentTableBody">
+                            <tr><td colspan="8" style="text-align: center; color: #9ca3af;">暂无数据</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div class="card">
-            <h3>➕ 手动新增耗材档案</h3>
-            <div class="form-row" style="margin-top: 12px;">
-                <div class="form-group">
-                    <label>品牌</label>
-                    <input type="text" id="f_brand" value="Bambu Lab">
-                </div>
-                <div class="form-group">
-                    <label>材质</label>
-                    <input type="text" id="f_material" placeholder="如 PLA / PETG">
-                </div>
-                <div class="form-group">
-                    <label>颜色名称与 HEX</label>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="f_color_name" placeholder="如 哑光黑">
-                        <input type="color" id="f_color_hex" value="#000000" style="width: 50px; padding: 2px;">
+        <!-- 视图 2: 设备管理 (虚拟 AMS) -->
+        <div id="tab_printers" class="hidden">
+            <div class="card">
+                <h3>➕ 添加 3D 打印机设备</h3>
+                <div class="form-row" style="margin-top: 12px;">
+                    <div class="form-group">
+                        <label>打印机名称</label>
+                        <input type="text" id="p_name" placeholder="例如: 1号机-X1C">
+                    </div>
+                    <div class="form-group">
+                        <label>机型</label>
+                        <select id="p_model">
+                            <option value="Bambu X1-Carbon">Bambu X1-Carbon</option>
+                            <option value="Bambu P1S">Bambu P1S</option>
+                            <option value="Bambu P1P">Bambu P1P</option>
+                            <option value="Bambu A1">Bambu A1</option>
+                            <option value="Bambu A1 mini">Bambu A1 mini</option>
+                            <option value="Other">其他打印机</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-primary" onclick="addPrinter()" style="width: 100%; height: 38px;">确认添加设备</button>
                     </div>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>初始重量 (克/g)</label>
-                    <input type="number" id="f_weight" value="1000">
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3>🖨️ 设备与虚拟 AMS 映射</h3>
+                    <button class="btn btn-blue" onclick="loadPrinters()" style="height: 30px; font-size: 12px; padding: 0 10px;">🔄 刷新设备</button>
                 </div>
-                <div class="form-group">
-                    <label>购买总价 (元)</label>
-                    <input type="number" id="f_price" value="99">
+                <div id="printersListContainer">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 视图 3: 数据洞察 -->
+        <div id="tab_analytics" class="hidden">
+            <div class="stat-grid" id="analyticsSummary">
+                <div class="stat-card">
+                    <div class="stat-title">累计打印消耗总重</div>
+                    <div class="stat-value" id="statTotalWeight">0.0 g</div>
                 </div>
-                <div class="form-group" style="display: flex; align-items: flex-end;">
-                    <button class="btn btn-primary" onclick="addFilament()" style="width: 100%;">保存耗材档案</button>
+                <div class="stat-card" style="border-left-color: #f59e0b;">
+                    <div class="stat-title">消耗折算总金额</div>
+                    <div class="stat-value" id="statTotalCost">¥ 0.00</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #2563eb;">
+                    <div class="stat-title">总计扣减/打印任务</div>
+                    <div class="stat-value" id="statTaskCount">0 次</div>
+                </div>
+            </div>
+
+            <div class="analytics-split" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="card">
+                    <h3>🖨️ 各机位产出与消耗占比</h3>
+                    <div class="table-responsive">
+                        <table style="margin-top: 8px;">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>消耗克重</th>
+                                    <th>折算成本</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statPrintersBody">
+                                <tr><td colspan="3" style="text-align: center; color: #9ca3af;">暂无记录</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🧵 热门耗材材质排行</h3>
+                    <div class="table-responsive">
+                        <table style="margin-top: 8px;">
+                            <thead>
+                                <tr>
+                                    <th>耗材材质</th>
+                                    <th>消耗总量</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statMaterialsBody">
+                                <tr><td colspan="2" style="text-align: center; color: #9ca3af;">暂无记录</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3>我的耗材台账</h3>
-                <button class="btn btn-blue" onclick="loadFilaments()" style="width: auto; padding: 6px 12px; font-size: 13px;">刷新列表</button>
+        <!-- 视图 4: 补货清单 -->
+        <div id="tab_shopping" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <h3>🛒 待补货清单 (存量 &lt; 200g)</h3>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-primary" onclick="copyShoppingListText()" style="height: 32px; font-size: 12px; padding: 0 10px;">📋 复制采购单</button>
+                        <button class="btn btn-blue" onclick="exportShoppingJson()" style="height: 32px; font-size: 12px; padding: 0 10px;">📤 导出 JSON</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>耗材品名</th>
+                                <th>当前剩余</th>
+                                <th>购买链接</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shoppingTableBody">
+                            <tr><td colspan="5" style="text-align: center; color: #9ca3af;">暂无缺料耗材</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>品牌</th>
-                        <th>材质</th>
-                        <th>颜色</th>
-                        <th>剩余重量 / 价值</th>
-                        <th>买入原价</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="filamentTableBody">
-                    <tr><td colspan="7" style="text-align: center; color: #9ca3af;">暂无数据</td></tr>
-                </tbody>
-            </table>
+        </div>
+
+        <!-- 视图 5: API 密钥 -->
+        <div id="tab_apikeys" class="hidden">
+            <div class="card">
+                <h3>🔑 Windows 客户端 API 密钥</h3>
+                <p style="font-size: 13px; color: #6b7280; margin-top: 6px;">生成 API Key 填入客户端设置，或在客户端使用账号密码一键获取。</p>
+                <div style="margin-top: 14px;">
+                    <button class="btn btn-blue" onclick="generateApiKey()">生成/重置我的脚本 API Key</button>
+                </div>
+                <div id="apiKeyDisplay" class="code-box hidden">尚未生成 API Key</div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- 弹窗 1：主列表【手动调整】弹窗 -->
+<!-- 弹窗 1: 手动调整克重 -->
 <div id="adjustModal" class="modal-overlay hidden">
-    <div class="modal-content" style="width: 500px;">
+    <div class="modal-content" style="width: 460px;">
         <div class="modal-header">
             <h3>⚙️ 手动调整耗材存量</h3>
             <span class="close-btn" onclick="closeAdjustModal()">&times;</span>
@@ -167,73 +351,106 @@
             <input type="hidden" id="adj_filament_id">
             <div class="form-group">
                 <label>调整类型</label>
-                <select id="adj_type" onchange="calculateAdjPriceNotice('adj')">
+                <select id="adj_type">
                     <option value="reduce">减少 (-)</option>
                     <option value="add">增加 (+)</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>调整数值 (克/g)</label>
-                <input type="number" id="adj_weight" placeholder="请输入数值 (例如: 50)" oninput="calculateAdjPriceNotice('adj')">
+                <label>变动克重 (g)</label>
+                <input type="number" id="adj_weight" placeholder="请输入数值 (如: 50)" inputmode="decimal">
             </div>
             <div class="form-group">
-                <label>模型名称 / 备注说明</label>
-                <input type="text" id="adj_reason" placeholder="例: 手动补充库存、炒面损耗、模型名称">
+                <label>模型名称 / 变动原因</label>
+                <input type="text" id="adj_reason" placeholder="例如: 手动样品、炒面废料、补充新卷">
             </div>
-            <div id="adj_price_notice" style="font-size: 13px; color: #d97706; font-weight: bold; margin-bottom: 12px;"></div>
-
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-amber" style="flex: 1;" onclick="submitAdjustModal()">确认提交并重算价格</button>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button class="btn btn-amber" style="flex: 1;" onclick="submitAdjustModal()">确认提交</button>
                 <button class="btn btn-secondary" style="flex: 1;" onclick="closeAdjustModal()">取消</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 弹窗 2：【查看明细】弹窗 -->
+<!-- 弹窗 2: 查看历史消耗记录 -->
 <div id="logModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>📜 耗材历史使用与损耗账单</h3>
+            <h3>📜 耗材历史流水与快照</h3>
             <span class="close-btn" onclick="closeLogs()">&times;</span>
         </div>
         <div class="modal-body">
-            <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="hidden" id="modal_filament_id">
-                    <select id="modal_adj_type" style="width: 110px; padding: 6px; font-size: 13px;" onchange="calculateAdjPriceNotice('modal')">
-                        <option value="reduce">减少 (-)</option>
-                        <option value="add">增加 (+)</option>
-                    </select>
-                    <input type="number" id="quick_adj_weight" placeholder="克重 (g)" style="width: 120px; padding: 6px 10px; font-size: 13px;" oninput="calculateAdjPriceNotice('modal')">
-                    <input type="text" id="quick_adj_reason" placeholder="模型名称 / 备注说明" style="flex: 1; padding: 6px 10px; font-size: 13px;">
-                    <button class="btn btn-amber" style="padding: 6px 14px; font-size: 13px; white-space: nowrap;" onclick="submitModalQuickAdjust()">提交调整</button>
-                </div>
-                <div id="modal_adj_price_notice" style="font-size: 12px; color: #d97706; font-weight: bold; margin-top: 6px; margin-left: 2px;"></div>
+            <div class="table-responsive">
+                <table class="table-mobile-cards">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>任务说明</th>
+                            <th>变动重量</th>
+                            <th>损耗金额</th>
+                            <th>剩余存量</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody">
+                        <tr><td colspan="6" style="text-align: center; color: #9ca3af;">加载中...</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
+    </div>
+</div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>时间</th>
-                        <th>模型 / 备注说明</th>
-                        <th>变动重量</th>
-                        <th>损耗/补充金额</th>
-                        <th>变动后剩余存量 (价值)</th>
-                        <th style="width: 80px;">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="logTableBody">
-                    <tr><td colspan="6" style="text-align: center; color: #9ca3af;">加载中...</td></tr>
-                </tbody>
-            </table>
+<!-- 弹窗 3: AMS 槽位映射配置 -->
+<div id="amsModal" class="modal-overlay hidden">
+    <div class="modal-content" style="width: 520px;">
+        <div class="modal-header">
+            <h3 id="amsModalTitle">⚙️ 虚拟 AMS 槽位映射</h3>
+            <span class="close-btn" onclick="closeAmsModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="ams_printer_id">
+            <div class="form-group">
+                <label>AMS 槽位 1 挂载耗材</label>
+                <select id="ams_slot_1"></select>
+            </div>
+            <div class="form-group">
+                <label>AMS 槽位 2 挂载耗材</label>
+                <select id="ams_slot_2"></select>
+            </div>
+            <div class="form-group">
+                <label>AMS 槽位 3 挂载耗材</label>
+                <select id="ams_slot_3"></select>
+            </div>
+            <div class="form-group">
+                <label>AMS 槽位 4 挂载耗材</label>
+                <select id="ams_slot_4"></select>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 14px; height: 40px;" onclick="submitAmsMapping()">保存 AMS 挂载配置</button>
         </div>
     </div>
 </div>
 
 <script>
     const BASE_URL = window.location.origin;
-    let globalFilamentsMap = {};
+    let globalFilaments = [];
+    let globalPrinters = [];
+
+    function switchTab(tabId) {
+        const tabs = ['dashboard', 'printers', 'analytics', 'shopping', 'apikeys'];
+        tabs.forEach(t => {
+            document.getElementById(`tab_${t}`).classList.add('hidden');
+        });
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(`tab_${tabId}`).classList.remove('hidden');
+        event.target.classList.add('active');
+
+        if (tabId === 'dashboard') loadFilaments();
+        else if (tabId === 'printers') loadPrinters();
+        else if (tabId === 'analytics') loadAnalytics();
+        else if (tabId === 'shopping') loadShoppingList();
+    }
 
     function showMsg(text, isError = false) {
         const msgDiv = document.getElementById('authMsg');
@@ -281,6 +498,7 @@
                 localStorage.setItem('username', u);
                 document.getElementById('authSection').classList.add('hidden');
                 document.getElementById('mainSection').classList.remove('hidden');
+                document.getElementById('userHeaderBox').classList.remove('hidden');
                 document.getElementById('currentUser').innerText = u;
                 loadFilaments();
             } else {
@@ -291,12 +509,20 @@
         }
     }
 
+    function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        document.getElementById('mainSection').classList.add('hidden');
+        document.getElementById('userHeaderBox').classList.add('hidden');
+        document.getElementById('authSection').classList.remove('hidden');
+    }
+
     async function generateApiKey() {
         const token = localStorage.getItem('token');
         const res = await fetch(`${BASE_URL}/api/auth/api-keys`, {
             method: 'POST',
             headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-            body: JSON.stringify({key_name: "Windows后处理脚本"})
+            body: JSON.stringify({key_name: "Web端生成的APIKey"})
         });
         if (res.ok) {
             const data = await res.json();
@@ -306,30 +532,7 @@
         }
     }
 
-    async function addFilament() {
-        const token = localStorage.getItem('token');
-        const payload = {
-            brand: document.getElementById('f_brand').value,
-            material: document.getElementById('f_material').value,
-            color_name: document.getElementById('f_color_name').value,
-            color_hex: document.getElementById('f_color_hex').value,
-            initial_weight_g: parseFloat(document.getElementById('f_weight').value),
-            current_weight_g: parseFloat(document.getElementById('f_weight').value),
-            price: parseFloat(document.getElementById('f_price').value)
-        };
-        if(!payload.material || !payload.color_name) return alert("请填写材质和颜色名称");
-
-        const res = await fetch(`${BASE_URL}/api/filaments`, {
-            method: 'POST',
-            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-            alert("新增耗材成功！");
-            loadFilaments();
-        }
-    }
-
+    // --- 耗材台账逻辑 ---
     async function loadFilaments() {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -338,74 +541,101 @@
             headers: {'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-cache'}
         });
         if (res.ok) {
-            const list = await res.json();
+            globalFilaments = await res.json();
             const tbody = document.getElementById('filamentTableBody');
             
-            globalFilamentsMap = {};
-            list.forEach(item => { globalFilamentsMap[item.id] = item; });
-
-            if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #9ca3af;">暂无耗材数据</td></tr>`;
+            if (globalFilaments.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #9ca3af;">暂无耗材档案</td></tr>`;
                 return;
             }
 
-            const rowsHtml = list.map(item => {
-                const unitPricePerG = (item.price / (item.initial_weight_g || 1000));
-                const currentRemainingValue = (item.current_weight_g * unitPricePerG).toFixed(2);
+            tbody.innerHTML = globalFilaments.map(item => {
+                const unitPrice = item.price / (item.initial_weight_g || 1000);
+                const val = (item.current_weight_g * unitPrice).toFixed(2);
+                const isLow = item.current_weight_g < 200;
+                const linkHtml = item.purchase_url ? `<a href="${item.purchase_url}" target="_blank" style="color:#2563eb; text-decoration:none; font-weight:600;">🔗 打开购买</a>` : '<span style="color:#9ca3af;">无</span>';
 
                 return `
                     <tr>
-                        <td><strong>${item.id}</strong></td>
-                        <td>${item.brand}</td>
-                        <td>${item.material}</td>
-                        <td><span class="color-badge" style="background-color: ${item.color_hex};"></span>${item.color_name}</td>
-                        <td>
-                            <strong style="color: #10b981;">${item.current_weight_g} g</strong>
-                            <span class="price-tag">(约 ¥${currentRemainingValue})</span>
+                        <td data-label="ID"><strong>#${item.id}</strong></td>
+                        <td data-label="品牌">${item.brand}</td>
+                        <td data-label="材质"><strong>${item.material}</strong></td>
+                        <td data-label="颜色"><span class="color-badge" style="background-color: ${item.color_hex};"></span>${item.color_name}</td>
+                        <td data-label="剩余存量">
+                            ${isLow ? '<span class="badge-warning">告急</span>' : ''}
+                            <strong style="color: ${isLow ? '#ef4444' : '#10b981'};">${item.current_weight_g} g</strong>
+                            <span style="font-size:12px; color:#6b7280;">(¥${val})</span>
                         </td>
-                        <td>¥ ${item.price}</td>
-                        <td>
-                            <button class="btn btn-purple" style="margin-right: 4px;" onclick="showLogs(${item.id})">查看明细</button>
-                            <button class="btn btn-amber" style="margin-right: 4px;" onclick="openAdjustModal(${item.id})">手动调整</button>
-                            <button class="btn btn-danger" onclick="deleteFilament(${item.id})">删除档案</button>
+                        <td data-label="买入原价">¥ ${item.price}</td>
+                        <td data-label="购买链接">${linkHtml}</td>
+                        <td data-label="操作">
+                            <button class="btn btn-purple" style="height:28px; padding:0 8px; font-size:11px;" onclick="showLogs(${item.id})">明细</button>
+                            <button class="btn btn-amber" style="height:28px; padding:0 8px; font-size:11px;" onclick="openAdjustModal(${item.id})">调整</button>
+                            <button class="btn btn-danger" style="height:28px; padding:0 8px; font-size:11px;" onclick="deleteFilament(${item.id})">删除</button>
                         </td>
                     </tr>
                 `;
             }).join('');
-
-            tbody.innerHTML = rowsHtml;
         }
     }
 
-    function calculateAdjPriceNotice(source) {
-        const isModal = source === 'modal';
-        const fid = document.getElementById(isModal ? 'modal_filament_id' : 'adj_filament_id').value;
-        const adjType = document.getElementById(isModal ? 'modal_adj_type' : 'adj_type').value;
-        const weightInput = parseFloat(document.getElementById(isModal ? 'quick_adj_weight' : 'adj_weight').value);
-        const noticeDiv = document.getElementById(isModal ? 'modal_adj_price_notice' : 'adj_price_notice');
+    async function addFilament() {
+        const token = localStorage.getItem('token');
+        const count = parseInt(document.getElementById('f_count').value) || 1;
+        const payload = {
+            brand: document.getElementById('f_brand').value.trim() || 'Bambu Lab',
+            material: document.getElementById('f_material').value.trim(),
+            color_name: document.getElementById('f_color_name').value.trim(),
+            color_hex: document.getElementById('f_color_hex').value,
+            initial_weight_g: parseFloat(document.getElementById('f_weight').value) || 1000.0,
+            current_weight_g: parseFloat(document.getElementById('f_weight').value) || 1000.0,
+            price: parseFloat(document.getElementById('f_price').value) || 99.0,
+            purchase_url: document.getElementById('f_purchase_url').value.trim()
+        };
+        if (!payload.material || !payload.color_name) return alert("请填写材质和颜色名称！");
 
-        if (!fid || !globalFilamentsMap[fid] || isNaN(weightInput) || weightInput <= 0) {
-            noticeDiv.innerText = '';
-            return;
-        }
-
-        const filament = globalFilamentsMap[fid];
-        const unitPricePerG = (filament.price / (filament.initial_weight_g || 1000));
-        const cost = (weightInput * unitPricePerG).toFixed(2);
-
-        if (adjType === 'reduce') {
-            noticeDiv.innerText = `💡 提示：本次扣减 ${weightInput}g，预计折算消耗金额：¥ ${cost} 元`;
+        if (count === 1) {
+            const res = await fetch(`${BASE_URL}/api/filaments`, {
+                method: 'POST',
+                headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("耗材录入成功！");
+                loadFilaments();
+            }
         } else {
-            noticeDiv.innerText = `💡 提示：本次补充 ${weightInput}g，预计折算增加存量价值：¥ ${cost} 元`;
+            const batch = Array(count).fill(payload);
+            const res = await fetch(`${BASE_URL}/api/ingest/script-filaments-batch`, {
+                method: 'POST',
+                headers: {'X-API-Key': await getOrFetchApiKey(), 'Content-Type': 'application/json'},
+                body: JSON.stringify(batch)
+            });
+            if (res.ok) {
+                alert(`成功批量录入 ${count} 卷耗材档案！`);
+                loadFilaments();
+            }
         }
     }
 
-    function openAdjustModal(filamentId) {
-        document.getElementById('adj_filament_id').value = filamentId;
+    async function getOrFetchApiKey() {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${BASE_URL}/api/auth/api-keys`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+            body: JSON.stringify({key_name: "WebAutoKey"})
+        });
+        if (res.ok) {
+            const d = await res.json();
+            return d.api_key;
+        }
+        return "";
+    }
+
+    function openAdjustModal(fid) {
+        document.getElementById('adj_filament_id').value = fid;
         document.getElementById('adj_weight').value = '';
         document.getElementById('adj_reason').value = '';
-        document.getElementById('adj_type').value = 'reduce';
-        document.getElementById('adj_price_notice').innerText = '';
         document.getElementById('adjustModal').classList.remove('hidden');
     }
 
@@ -418,70 +648,50 @@
         const adjType = document.getElementById('adj_type').value;
         const w = parseFloat(document.getElementById('adj_weight').value);
         const reason = document.getElementById('adj_reason').value.trim() || "手动调整";
-
-        if (isNaN(w) || w <= 0) return alert("请输入有效的克重数值");
+        if (isNaN(w) || w <= 0) return alert("请输入有效克重数值！");
 
         const actualWeightChange = adjType === 'reduce' ? w : -w;
         const token = localStorage.getItem('token');
-
         const res = await fetch(`${BASE_URL}/api/filaments/${fid}/adjust-weight`, {
             method: 'POST',
             headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
             body: JSON.stringify({adjust_weight_g: actualWeightChange, reason: reason})
         });
-
         if (res.ok) {
             closeAdjustModal();
             loadFilaments();
-        } else {
-            alert("调整失败，请刷新后重试");
         }
     }
 
     async function showLogs(filamentId) {
-        document.getElementById('modal_filament_id').value = filamentId;
-        document.getElementById('quick_adj_weight').value = '';
-        document.getElementById('quick_adj_reason').value = '';
-        document.getElementById('modal_adj_type').value = 'reduce';
-        document.getElementById('modal_adj_price_notice').innerText = '';
         document.getElementById('logModal').classList.remove('hidden');
-        await refreshModalLogs(filamentId);
-    }
-
-    async function refreshModalLogs(filamentId) {
         const token = localStorage.getItem('token');
         const tbody = document.getElementById('logTableBody');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#9ca3af;">加载中...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">加载中...</td></tr>';
 
-        const filament = globalFilamentsMap[filamentId];
-        const unitPricePerG = filament ? (filament.price / (filament.initial_weight_g || 1000)) : 0;
+        const filament = globalFilaments.find(f => f.id === filamentId);
+        const unitPrice = filament ? (filament.price / (filament.initial_weight_g || 1000)) : 0;
 
         const res = await fetch(`${BASE_URL}/api/filaments/${filamentId}/logs?_t=${Date.now()}`, {
             headers: {'Authorization': 'Bearer ' + token, 'Cache-Control': 'no-cache'}
         });
-
         if (res.ok) {
             const logs = await res.json();
             if (logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af;">暂无使用扣减记录</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af;">暂无消耗记录</td></tr>`;
                 return;
             }
             tbody.innerHTML = logs.map(log => {
-                const absWeight = Math.abs(log.used_weight_g);
-                const costMoney = (absWeight * unitPricePerG).toFixed(2);
-                const remMoney = log.remaining_weight_g !== null ? (log.remaining_weight_g * unitPricePerG).toFixed(2) : '-';
-
+                const cost = (Math.abs(log.used_weight_g) * unitPrice).toFixed(2);
                 return `
                     <tr>
-                        <td style="font-size: 12px; color: #64748b;">${log.created_at}</td>
-                        <td class="task-name-box">${log.task_name || '手动调整/导出'}</td>
-                        <td class="${log.used_weight_g > 0 ? 'badge-used' : 'badge-add'}">${log.used_weight_g > 0 ? '-' + log.used_weight_g : '+' + absWeight} g</td>
-                        <td style="font-weight: bold; color: ${log.used_weight_g > 0 ? '#ef4444' : '#10b981'};">
-                            ${log.used_weight_g > 0 ? '- ¥' + costMoney : '+ ¥' + costMoney}
-                        </td>
-                        <td><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g (¥' + remMoney + ')' : '-'}</strong></td>
-                        <td>
-                            <button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="deleteLogRecord(${log.id}, ${log.used_weight_g})">撤销/删除</button>
+                        <td data-label="时间" style="font-size:12px; color:#6b7280;">${log.created_at}</td>
+                        <td data-label="任务说明">${log.task_name || '-'}</td>
+                        <td data-label="变动重量" style="font-weight:bold; color:${log.used_weight_g > 0 ? '#ef4444' : '#10b981'};">${log.used_weight_g > 0 ? '-' : '+'}${Math.abs(log.used_weight_g)} g</td>
+                        <td data-label="损耗金额">¥ ${cost}</td>
+                        <td data-label="剩余存量"><strong>${log.remaining_weight_g !== null ? log.remaining_weight_g + ' g' : '-'}</strong></td>
+                        <td data-label="操作">
+                            <button class="btn btn-danger" style="height:26px; padding:0 8px; font-size:11px;" onclick="deleteLogRecord(${log.id})">撤销</button>
                         </td>
                     </tr>
                 `;
@@ -489,74 +699,25 @@
         }
     }
 
-    async function submitModalQuickAdjust() {
-        const fid = document.getElementById('modal_filament_id').value;
-        const adjType = document.getElementById('modal_adj_type').value;
-        const w = parseFloat(document.getElementById('quick_adj_weight').value);
-        const reason = document.getElementById('quick_adj_reason').value.trim() || "手动调整";
-
-        if (isNaN(w) || w <= 0) return alert("请输入有效的克重数值");
-
-        const actualWeightChange = adjType === 'reduce' ? w : -w;
-        const token = localStorage.getItem('token');
-
-        const res = await fetch(`${BASE_URL}/api/filaments/${fid}/adjust-weight`, {
-            method: 'POST',
-            headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
-            body: JSON.stringify({adjust_weight_g: actualWeightChange, reason: reason})
-        });
-
-        if (res.ok) {
-            document.getElementById('quick_adj_weight').value = '';
-            document.getElementById('quick_adj_reason').value = '';
-            document.getElementById('modal_adj_price_notice').innerText = '';
-            await loadFilaments();
-            await refreshModalLogs(fid);
-        }
-    }
-
-    async function deleteLogRecord(recordId, usedWeight) {
-        const defaultRefund = usedWeight;
-        
-        let tipText = "";
-        if (usedWeight > 0) {
-            tipText = `该记录原本【减少了 ${usedWeight}g】\n• 确认输入 ${usedWeight} 将【退还并增加 ${usedWeight}g】存量\n• 输入 0 仅删除记录不改变重量`;
-        } else {
-            tipText = `该记录原本【增加了 ${Math.abs(usedWeight)}g】\n• 确认输入 ${usedWeight} 将【扣除并减少 ${Math.abs(usedWeight)}g】存量\n• 输入 0 仅删除记录不改变重量`;
-        }
-
-        const inputVal = prompt(
-            `确定要撤销/删除此条记录吗？\n\n${tipText}`, 
-            defaultRefund
-        );
-
-        if (inputVal === null) return;
-
-        const refundWeight = parseFloat(inputVal);
-        if (isNaN(refundWeight)) return alert("请输入有效的数字！");
-
-        const token = localStorage.getItem('token');
-        const fid = document.getElementById('modal_filament_id').value;
-
-        const res = await fetch(`${BASE_URL}/api/usage-records/${recordId}?refund_weight_g=${refundWeight}`, {
-            method: 'DELETE',
-            headers: {'Authorization': 'Bearer ' + token}
-        });
-
-        if (res.ok) {
-            await loadFilaments();
-            await refreshModalLogs(fid);
-        } else {
-            alert("撤销失败，请检查网络");
-        }
-    }
-
     function closeLogs() {
         document.getElementById('logModal').classList.add('hidden');
     }
 
+    async function deleteLogRecord(recordId) {
+        if (!confirm("确定要撤销此条变动记录吗？服务端将恢复对应余量快照。")) return;
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${BASE_URL}/api/usage-records/${recordId}`, {
+            method: 'DELETE',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (res.ok) {
+            closeLogs();
+            loadFilaments();
+        }
+    }
+
     async function deleteFilament(id) {
-        if(!confirm("确定删除该耗材档案吗？")) return;
+        if(!confirm("确定彻底删除该耗材档案吗？")) return;
         const token = localStorage.getItem('token');
         await fetch(`${BASE_URL}/api/filaments/${id}`, {
             method: 'DELETE',
@@ -565,11 +726,254 @@
         loadFilaments();
     }
 
-    function logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        document.getElementById('mainSection').classList.add('hidden');
-        document.getElementById('authSection').classList.remove('hidden');
+    // --- 设备与虚拟 AMS 逻辑 ---
+    async function loadPrinters() {
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-printers`, {
+            headers: {'X-API-Key': apiKey}
+        });
+        if (res.ok) {
+            globalPrinters = await res.json();
+            const container = document.getElementById('printersListContainer');
+            if (globalPrinters.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:30px;">暂无打印机设备</div>';
+                return;
+            }
+
+            const fMap = {};
+            globalFilaments.forEach(f => { fMap[f.id] = f; });
+
+            container.innerHTML = globalPrinters.map(p => {
+                const slots = p.ams_slots || {};
+                let slotsHtml = '';
+                for (let i = 1; i <= 4; i++) {
+                    const fid = slots[String(i)];
+                    const f = fMap[fid];
+                    slotsHtml += `
+                        <div style="background:#fff; padding:8px 10px; border-radius:6px; border:1px solid #e5e7eb;">
+                            <div style="font-size:11px; color:#10b981; font-weight:bold;">槽位 ${i}</div>
+                            <div style="font-size:13px; font-weight:600; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f ? `${f.brand} ${f.material}` : '<span style="color:#9ca3af;">[未挂载]</span>'}</div>
+                            <div style="font-size:11px; color:#6b7280;">${f ? `${f.color_name} (${f.current_weight_g}g)` : '-'}</div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div style="background:#f3f4f6; border-radius:8px; padding:12px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <strong style="font-size:15px;">🖨️ ${p.name}</strong>
+                                <span style="font-size:12px; color:#6b7280; margin-left:4px;">(${p.model || 'Bambu'})</span>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-blue" style="height:28px; padding:0 10px; font-size:12px;" onclick="openAmsModal(${p.id})">⚙️ 映射 AMS</button>
+                                <button class="btn btn-danger" style="height:28px; padding:0 10px; font-size:12px;" onclick="deletePrinter(${p.id})">删除</button>
+                            </div>
+                        </div>
+                        <div class="ams-slots-grid">${slotsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    async function addPrinter() {
+        const name = document.getElementById('p_name').value.trim();
+        const model = document.getElementById('p_model').value;
+        if (!name) return alert("请输入打印机名称！");
+
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-printers`, {
+            method: 'POST',
+            headers: {'X-API-Key': apiKey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name, model: model})
+        });
+        if (res.ok) {
+            document.getElementById('p_name').value = '';
+            loadPrinters();
+        }
+    }
+
+    function openAmsModal(printerId) {
+        const p = globalPrinters.find(x => x.id === printerId);
+        if (!p) return;
+        document.getElementById('ams_printer_id').value = printerId;
+        document.getElementById('amsModalTitle').innerText = `⚙️ 映射 AMS 槽位 - ${p.name}`;
+
+        let opts = '<option value="">[ 未挂载耗材 ]</option>';
+        globalFilaments.forEach(f => {
+            opts += `<option value="${f.id}">#${f.id} - ${f.brand} ${f.material} [${f.color_name}] (剩${f.current_weight_g}g)</option>`;
+        });
+
+        const slots = p.ams_slots || {};
+        for (let i = 1; i <= 4; i++) {
+            const select = document.getElementById(`ams_slot_${i}`);
+            select.innerHTML = opts;
+            select.value = slots[String(i)] || "";
+        }
+        document.getElementById('amsModal').classList.remove('hidden');
+    }
+
+    function closeAmsModal() {
+        document.getElementById('amsModal').classList.add('hidden');
+    }
+
+    async function submitAmsMapping() {
+        const pid = document.getElementById('ams_printer_id').value;
+        const slots = {
+            "1": document.getElementById('ams_slot_1').value ? parseInt(document.getElementById('ams_slot_1').value) : null,
+            "2": document.getElementById('ams_slot_2').value ? parseInt(document.getElementById('ams_slot_2').value) : null,
+            "3": document.getElementById('ams_slot_3').value ? parseInt(document.getElementById('ams_slot_3').value) : null,
+            "4": document.getElementById('ams_slot_4').value ? parseInt(document.getElementById('ams_slot_4').value) : null
+        };
+
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-printers/${pid}/ams`, {
+            method: 'POST',
+            headers: {'X-API-Key': apiKey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({ams_slots: slots})
+        });
+        if (res.ok) {
+            closeAmsModal();
+            loadPrinters();
+        }
+    }
+
+    async function deletePrinter(pid) {
+        if (!confirm("确定删除该打印机设备吗？")) return;
+        const apiKey = await getOrFetchApiKey();
+        await fetch(`${BASE_URL}/api/ingest/script-printers/${pid}`, {
+            method: 'DELETE',
+            headers: {'X-API-Key': apiKey}
+        });
+        loadPrinters();
+    }
+
+    // --- 数据洞察逻辑 ---
+    async function loadAnalytics() {
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-analytics`, {
+            headers: {'X-API-Key': apiKey}
+        });
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('statTotalWeight').innerText = `${data.total_consumed_g.toFixed(1)} g`;
+            document.getElementById('statTotalCost').innerText = `¥ ${data.total_consumed_cost.toFixed(2)}`;
+            document.getElementById('statTaskCount').innerText = `${data.task_count} 次`;
+
+            const pBody = document.getElementById('statPrintersBody');
+            if (!data.printers_stat || data.printers_stat.length === 0) {
+                pBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#9ca3af;">暂无数据</td></tr>';
+            } else {
+                pBody.innerHTML = data.printers_stat.map(p => `
+                    <tr>
+                        <td><strong>${p.name}</strong></td>
+                        <td style="color:#10b981; font-weight:bold;">${p.consumed_g.toFixed(1)} g</td>
+                        <td>¥ ${p.cost.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            const mBody = document.getElementById('statMaterialsBody');
+            if (!data.materials_stat || data.materials_stat.length === 0) {
+                mBody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#9ca3af;">暂无数据</td></tr>';
+            } else {
+                mBody.innerHTML = data.materials_stat.map(m => `
+                    <tr>
+                        <td><strong>${m.material}</strong></td>
+                        <td style="color:#2563eb; font-weight:bold;">${m.consumed_g.toFixed(1)} g</td>
+                    </tr>
+                `).join('');
+            }
+        }
+    }
+
+    // --- 补货清单逻辑 ---
+    function loadShoppingList() {
+        const tbody = document.getElementById('shoppingTableBody');
+        const lowList = globalFilaments.filter(f => f.current_weight_g < 200);
+
+        if (lowList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#10b981; font-weight:bold; padding:20px 0;">🎉 耗材库存充裕，暂无需要补货的耗材！</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = lowList.map(item => {
+            return `
+                <tr>
+                    <td data-label="ID"><strong>#${item.id}</strong></td>
+                    <td data-label="品名"><strong>${item.brand} ${item.material}</strong> [${item.color_name}]</td>
+                    <td data-label="剩余存量" style="color:#ef4444; font-weight:bold;">${item.current_weight_g} g</td>
+                    <td data-label="购买链接">
+                        <div style="display:flex; gap:4px; width:100%; max-width:320px;">
+                            <input type="text" id="shop_url_${item.id}" value="${item.purchase_url || ''}" placeholder="粘贴购买链接" style="height:32px; font-size:12px;">
+                            <button class="btn btn-primary" style="height:32px; padding:0 8px; font-size:11px;" onclick="saveSingleUrl(${item.id})">保存</button>
+                            <button class="btn btn-secondary" style="height:32px; padding:0 8px; font-size:11px; white-space:nowrap;" onclick="applySameUrl('${item.brand}', '${item.material}', ${item.id})">同款</button>
+                        </div>
+                    </td>
+                    <td data-label="操作">
+                        ${item.purchase_url ? `<a href="${item.purchase_url}" target="_blank" class="btn btn-blue" style="height:28px; padding:0 10px; font-size:12px; text-decoration:none;">去购买</a>` : '<span style="color:#9ca3af; font-size:12px;">未设链接</span>'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function saveSingleUrl(fid) {
+        const url = document.getElementById(`shop_url_${fid}`).value.trim();
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-filaments/${fid}/url`, {
+            method: 'POST',
+            headers: {'X-API-Key': apiKey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({purchase_url: url})
+        });
+        if (res.ok) {
+            alert("链接已保存！");
+            await loadFilaments();
+            loadShoppingList();
+        }
+    }
+
+    async function applySameUrl(brand, material, fid) {
+        const url = document.getElementById(`shop_url_${fid}`).value.trim();
+        if (!url) return alert("请先填写链接！");
+        const apiKey = await getOrFetchApiKey();
+        const res = await fetch(`${BASE_URL}/api/ingest/script-filaments/apply-url`, {
+            method: 'POST',
+            headers: {'X-API-Key': apiKey, 'Content-Type': 'application/json'},
+            body: JSON.stringify({brand: brand, material: material, purchase_url: url})
+        });
+        if (res.ok) {
+            alert("已成功批量应用至同款耗材！");
+            await loadFilaments();
+            loadShoppingList();
+        }
+    }
+
+    function copyShoppingListText() {
+        const lowList = globalFilaments.filter(f => f.current_weight_g < 200);
+        if (lowList.length === 0) return alert("当前无缺料耗材！");
+
+        const lines = [`🛒 【拓竹耗材补货采购单 - ${new Date().toISOString().split('T')[0]}】`];
+        lowList.forEach((f, idx) => {
+            const urlStr = f.purchase_url ? `\n   🔗 购买链接: ${f.purchase_url}` : '';
+            lines.push(`${idx + 1}. ${f.brand} ${f.material} [${f.color_name}] - 余量: ${f.current_weight_g}g (建议采购 1 卷)${urlStr}`);
+        });
+
+        navigator.clipboard.writeText(lines.join('\n')).then(() => {
+            alert("采购单文本已复制到剪贴板，可直接粘贴发送给微信好友/客服！");
+        });
+    }
+
+    function exportShoppingJson() {
+        const lowList = globalFilaments.filter(f => f.current_weight_g < 200);
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lowList, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `shopping_list_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
     }
 
     window.onload = function() {
@@ -578,6 +982,7 @@
         if (token && user) {
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('mainSection').classList.remove('hidden');
+            document.getElementById('userHeaderBox').classList.remove('hidden');
             document.getElementById('currentUser').innerText = user;
             loadFilaments();
         }
