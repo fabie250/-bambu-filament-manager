@@ -4,7 +4,8 @@ import datetime
 import secrets
 import logging
 import hashlib
-from typing import Optional, List
+import json
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
@@ -27,7 +28,7 @@ DB_NAME = os.getenv("DB_NAME", "filament_db")
 
 DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 
-SECRET_KEY = os.getenv("JWT_SECRET", "bambu-filament-secret-key-change-in-prod")
+SECRET_KEY = os.getenv("JWT_SECRET", "bambu-filament-secret-key-v3.1.0-prod")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -50,6 +51,7 @@ class User(Base):
     api_keys = relationship("APIKey", back_populates="owner")
     filaments = relationship("Filament", back_populates="owner")
     records = relationship("UsageRecord", back_populates="owner")
+    printers = relationship("Printer", back_populates="owner")
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -61,6 +63,18 @@ class APIKey(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     owner = relationship("User", back_populates="api_keys")
+
+class Printer(Base):
+    __tablename__ = "printers"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)
+    model = Column(String(50), default="Bambu P1S")
+    ip_address = Column(String(50), nullable=True)
+    ams_slots_json = Column(Text, default="{}")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User", back_populates="printers")
 
 class Filament(Base):
     __tablename__ = "filaments"
@@ -74,6 +88,7 @@ class Filament(Base):
     current_weight_g = Column(Float, default=1000.0)
     spool_weight_g = Column(Float, default=250.0)
     price = Column(Float, default=0.0)
+    purchase_url = Column(Text, nullable=True)
     remarks = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -94,16 +109,28 @@ class UsageRecord(Base):
 
     owner = relationship("User", back_populates="records")
 
+# 自动建立表结构与字段热升级 (防止历史已有表缺少字段报错)
 Base.metadata.create_all(bind=engine)
-try:
-    with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE usage_records ADD COLUMN remaining_weight_g FLOAT DEFAULT NULL;"))
-        conn.commit()
-except Exception:
-    pass
+
+migration_sqls = [
+    "ALTER TABLE filaments ADD COLUMN purchase_url TEXT DEFAULT NULL;",
+    "ALTER TABLE usage_records ADD COLUMN remaining_weight_g FLOAT DEFAULT NULL;",
+    "ALTER TABLE usage_records ADD COLUMN printer_id INT DEFAULT NULL;",
+    "ALTER TABLE printers ADD COLUMN ams_slots_json TEXT DEFAULT NULL;",
+    "ALTER TABLE printers ADD COLUMN model VARCHAR(50) DEFAULT 'Bambu P1S';",
+    "ALTER TABLE printers ADD COLUMN ip_address VARCHAR(50) DEFAULT NULL;"
+]
+
+for sql in migration_sqls:
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(sql))
+            conn.commit()
+    except Exception:
+        pass
 
 # ----------------- 3. FastAPI 初始化与静态资源托管 -----------------
-app = FastAPI(title="拓竹耗材与打印机管理系统 API", version="2.0.0")
+app = FastAPI(title="拓竹耗材与打印机管理系统 Linux API", version="3.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -132,7 +159,7 @@ def read_index():
         idx = os.path.join(p, "index.html")
         if os.path.exists(idx):
             return FileResponse(idx)
-    return {"status": "success", "message": "API 服务运行正常 (MySQL)"}
+    return {"status": "success", "message": "API 服务运行正常 (MySQL v3.1.0)"}
 
 def get_db():
     db = SessionLocal()
@@ -160,6 +187,14 @@ class APIKeyResponse(BaseModel):
     api_key: str
     created_at: datetime.datetime
 
+class PrinterCreate(BaseModel):
+    name: str
+    model: Optional[str] = "Bambu P1S"
+    ip_address: Optional[str] = None
+
+class PrinterAmsUpdate(BaseModel):
+    ams_slots: Dict[str, Any]
+
 class FilamentCreate(BaseModel):
     brand: str = "Bambu Lab"
     material: str
@@ -170,7 +205,16 @@ class FilamentCreate(BaseModel):
     current_weight_g: float = 1000.0
     spool_weight_g: float = 250.0
     price: float = 0.0
+    purchase_url: Optional[str] = None
     remarks: Optional[str] = None
+
+class FilamentUrlUpdate(BaseModel):
+    purchase_url: str
+
+class FilamentApplySameUrl(BaseModel):
+    brand: str
+    material: str
+    purchase_url: str
 
 class ManualAdjustWeightData(BaseModel):
     adjust_weight_g: float
@@ -186,6 +230,7 @@ class FilamentOut(BaseModel):
     initial_weight_g: float
     current_weight_g: float
     price: float
+    purchase_url: Optional[str] = None
     created_at: datetime.datetime
     class Config:
         from_attributes = True
@@ -205,7 +250,7 @@ class ScriptReportData(BaseModel):
     printer_id: Optional[int] = None
     task_name: Optional[str] = None
 
-# ----------------- 5. 标准库 hashlib 安全哈希 (解决 bcrypt 兼容性) -----------------
+# ----------------- 5. 标准库 hashlib 安全哈希 -----------------
 def get_password_hash(password: str) -> str:
     salt = os.urandom(16).hex()
     pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
@@ -255,7 +300,7 @@ def verify_script_api_key(
         raise HTTPException(status_code=401, detail="API Key 无效或已禁用")
     return db_key.owner
 
-# ----------------- 6. API 接口定义 -----------------
+# ----------------- 6. API 鉴权与账号路由 -----------------
 @app.post("/api/auth/register", tags=["账号管理"])
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == user_data.username).first():
@@ -276,6 +321,119 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer"
     }
 
+@app.post("/api/auth/quick-api-key", tags=["账号管理"])
+def quick_get_api_key(user_data: UserCreate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == user_data.username).first()
+    if not user or not verify_password(user_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="账号或密码错误")
+    
+    existing_key = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).first()
+    if existing_key:
+        return {"status": "success", "username": user.username, "api_key": existing_key.api_key}
+    
+    raw_key = f"sk_{secrets.token_hex(16)}"
+    new_key = APIKey(key_name="ClientAutoGenerated", api_key=raw_key, user_id=user.id)
+    db.add(new_key)
+    db.commit()
+    db.refresh(new_key)
+    return {"status": "success", "username": user.username, "api_key": new_key.api_key}
+
+@app.get("/api/ingest/script-user-info", tags=["自动采集接入"])
+def get_script_user_info(user: User = Depends(verify_script_api_key)):
+    return {
+        "status": "success",
+        "username": user.username,
+        "user_id": user.id
+    }
+
+# ----------------- 7. 打印机设备管理与 AMS 挂载 -----------------
+@app.get("/api/ingest/script-printers", tags=["打印机管理"])
+def list_printers(user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    printers = db.query(Printer).filter(Printer.user_id == user.id).all()
+    res = []
+    for p in printers:
+        try:
+            slots = json.loads(p.ams_slots_json) if p.ams_slots_json else {}
+        except Exception:
+            slots = {}
+        res.append({
+            "id": p.id,
+            "name": p.name,
+            "model": p.model,
+            "ip_address": p.ip_address,
+            "ams_slots": slots
+        })
+    return res
+
+@app.post("/api/ingest/script-printers", tags=["打印机管理"])
+def create_printer(p: PrinterCreate, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    printer = Printer(name=p.name, model=p.model, ip_address=p.ip_address, user_id=user.id)
+    db.add(printer)
+    db.commit()
+    db.refresh(printer)
+    return {"status": "success", "id": printer.id, "name": printer.name}
+
+@app.post("/api/ingest/script-printers/{printer_id}/ams", tags=["打印机管理"])
+def update_printer_ams(printer_id: int, data: PrinterAmsUpdate, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    printer = db.query(Printer).filter(Printer.id == printer_id, Printer.user_id == user.id).first()
+    if not printer:
+        raise HTTPException(status_code=404, detail="打印机不存在")
+    printer.ams_slots_json = json.dumps(data.ams_slots)
+    db.commit()
+    return {"status": "success", "message": "AMS 槽位更新成功"}
+
+@app.delete("/api/ingest/script-printers/{printer_id}", tags=["打印机管理"])
+def delete_printer(printer_id: int, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    printer = db.query(Printer).filter(Printer.id == printer_id, Printer.user_id == user.id).first()
+    if not printer:
+        raise HTTPException(status_code=404, detail="打印机不存在")
+    db.delete(printer)
+    db.commit()
+    return {"status": "success", "message": "打印机已删除"}
+
+# ----------------- 8. 数据洞察与聚合分析 -----------------
+@app.get("/api/ingest/script-analytics", tags=["数据洞察"])
+def get_analytics_data(user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    records = db.query(UsageRecord).filter(UsageRecord.user_id == user.id, UsageRecord.used_weight_g > 0).all()
+    filaments = db.query(Filament).filter(Filament.user_id == user.id).all()
+    printers = db.query(Printer).filter(Printer.user_id == user.id).all()
+
+    f_map = {f.id: f for f in filaments}
+    p_map = {p.id: p.name for p in printers}
+
+    total_consumed_g = sum(r.used_weight_g for r in records)
+    total_cost = 0.0
+    material_usage = {}
+    printer_usage = {}
+
+    for r in records:
+        f = f_map.get(r.filament_id)
+        if f:
+            unit_price = f.price / (f.initial_weight_g if f.initial_weight_g > 0 else 1000.0)
+            cost = r.used_weight_g * unit_price
+            total_cost += cost
+            material_usage[f.material] = material_usage.get(f.material, 0.0) + r.used_weight_g
+
+        p_name = p_map.get(r.printer_id, "默认/未指定机位")
+        if p_name not in printer_usage:
+            printer_usage[p_name] = {"consumed_g": 0.0, "cost": 0.0}
+        printer_usage[p_name]["consumed_g"] += r.used_weight_g
+        if f:
+            printer_usage[p_name]["cost"] += r.used_weight_g * (f.price / (f.initial_weight_g or 1000.0))
+
+    printers_stat = [{"name": k, "consumed_g": v["consumed_g"], "cost": v["cost"]} for k, v in printer_usage.items()]
+    materials_stat = [{"material": k, "consumed_g": v} for k, v in sorted(material_usage.items(), key=lambda x: x[1], reverse=True)]
+
+    return {
+        "status": "success",
+        "total_consumed_g": total_consumed_g,
+        "total_consumed_cost": total_cost,
+        "task_count": len(records),
+        "printers_stat": printers_stat,
+        "materials_stat": materials_stat
+    }
+
+# ----------------- 9. 耗材档案管理与批量操作 -----------------
 @app.post("/api/auth/api-keys", response_model=APIKeyResponse, tags=["账号管理"])
 def create_script_api_key(key_data: APIKeyCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     raw_key = f"sk_{secrets.token_hex(16)}"
@@ -309,7 +467,8 @@ def get_filaments_for_script(user: User = Depends(verify_script_api_key), db: Se
             "color_hex": f.color_hex,
             "initial_weight_g": f.initial_weight_g,
             "current_weight_g": f.current_weight_g,
-            "price": f.price
+            "price": f.price,
+            "purchase_url": f.purchase_url
         }
         for f in filaments
     ]
@@ -322,6 +481,49 @@ def create_filament_for_script(f: FilamentCreate, user: User = Depends(verify_sc
     db.refresh(filament)
     return filament
 
+@app.post("/api/ingest/script-filaments-batch", tags=["自动采集接入"])
+def create_filaments_batch(items: List[FilamentCreate], user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    created = []
+    for item in items:
+        f = Filament(**item.dict(), user_id=user.id)
+        db.add(f)
+        created.append(f)
+    db.commit()
+    return {"status": "success", "count": len(created)}
+
+@app.post("/api/ingest/script-filaments/{filament_id}/url", tags=["自动采集接入"])
+def update_filament_url(filament_id: int, data: FilamentUrlUpdate, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    f = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="耗材不存在")
+    f.purchase_url = data.purchase_url
+    db.commit()
+    return {"status": "success", "message": "购买链接已更新"}
+
+@app.post("/api/ingest/script-filaments/apply-url", tags=["自动采集接入"])
+def apply_url_to_same_type(data: FilamentApplySameUrl, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    filaments = db.query(Filament).filter(
+        Filament.user_id == user.id,
+        Filament.brand == data.brand,
+        Filament.material == data.material
+    ).all()
+    for f in filaments:
+        f.purchase_url = data.purchase_url
+    db.commit()
+    return {"status": "success", "count": len(filaments)}
+
+@app.post("/api/ingest/script-filaments/import-urls", tags=["自动采集接入"])
+def import_urls_json(items: List[Dict[str, Any]], user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
+    for item in items:
+        fid = item.get("id")
+        p_url = item.get("purchase_url")
+        if fid and p_url:
+            f = db.query(Filament).filter(Filament.id == fid, Filament.user_id == user.id).first()
+            if f:
+                f.purchase_url = p_url
+    db.commit()
+    return {"status": "success", "message": "JSON 链接已成功批量导入"}
+
 @app.delete("/api/ingest/script-report-delete/{filament_id}", tags=["自动采集接入"])
 def delete_filament_for_script(filament_id: int, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     filament = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
@@ -333,11 +535,7 @@ def delete_filament_for_script(filament_id: int, user: User = Depends(verify_scr
     return {"status": "success", "message": "删除成功"}
 
 @app.get("/api/ingest/script-filament-logs/{filament_id}", tags=["自动采集接入"])
-def get_filament_logs_for_script(
-    filament_id: int, 
-    user: User = Depends(verify_script_api_key), 
-    db: Session = Depends(get_db)
-):
+def get_filament_logs_for_script(filament_id: int, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     filament = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
     if not filament:
         raise HTTPException(status_code=404, detail="耗材不存在或无权访问")
@@ -359,13 +557,8 @@ def get_filament_logs_for_script(
         })
     return res
 
-# 方案1核心：客户端精准时空快照回退
 @app.delete("/api/ingest/script-undo-record/{record_id}", tags=["自动采集接入"])
-def delete_record_for_script(
-    record_id: int, 
-    user: User = Depends(verify_script_api_key), 
-    db: Session = Depends(get_db)
-):
+def delete_record_for_script(record_id: int, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     record = db.query(UsageRecord).filter(UsageRecord.id == record_id, UsageRecord.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="记录不存在或无权操作")
@@ -388,18 +581,12 @@ def delete_record_for_script(
     return {"status": "success", "message": "记录已撤销，耗材余量已精准恢复到变动前快照状态"}
 
 @app.post("/api/filaments/{filament_id}/adjust-weight", tags=["耗材台账"])
-def adjust_filament_weight(
-    filament_id: int, 
-    data: ManualAdjustWeightData, 
-    user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
+def adjust_filament_weight(filament_id: int, data: ManualAdjustWeightData, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     filament = db.query(Filament).filter(Filament.id == filament_id, Filament.user_id == user.id).first()
     if not filament:
         raise HTTPException(status_code=404, detail="耗材不存在或无权访问")
 
     filament.current_weight_g = max(0.0, round(filament.current_weight_g - data.adjust_weight_g, 2))
-    
     action_str = "手动增加" if data.adjust_weight_g < 0 else "手动减少"
     task_desc = f"{action_str} ({data.reason})" if data.reason else action_str
 
@@ -427,20 +614,13 @@ def get_filament_usage_logs(filament_id: int, user: User = Depends(get_current_u
             r.created_at = r.created_at + datetime.timedelta(hours=8)
     return records
 
-# 方案1核心：网页后台精准时空快照回退
 @app.delete("/api/usage-records/{record_id}", tags=["耗材台账"])
-def delete_usage_record(
-    record_id: int, 
-    refund_weight_g: Optional[float] = None,
-    user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
+def delete_usage_record(record_id: int, refund_weight_g: Optional[float] = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     record = db.query(UsageRecord).filter(UsageRecord.id == record_id, UsageRecord.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="记录不存在")
 
     filament = db.query(Filament).filter(Filament.id == record.filament_id, Filament.user_id == user.id).first()
-    
     if filament:
         if refund_weight_g is not None:
             filament.current_weight_g = max(0.0, round(filament.current_weight_g + refund_weight_g, 2))
@@ -471,11 +651,7 @@ def delete_filament(filament_id: int, user: User = Depends(get_current_user), db
     return {"status": "success", "message": "删除成功"}
 
 @app.post("/api/ingest/script-report", tags=["自动采集接入"])
-def report_usage_from_script(
-    data: ScriptReportData,
-    user: User = Depends(verify_script_api_key),
-    db: Session = Depends(get_db)
-):
+def report_usage_from_script(data: ScriptReportData, user: User = Depends(verify_script_api_key), db: Session = Depends(get_db)):
     filament = db.query(Filament).filter(Filament.id == data.filament_id, Filament.user_id == user.id).first()
     if not filament:
         raise HTTPException(status_code=404, detail=f"找不到 ID={data.filament_id} 的耗材")
